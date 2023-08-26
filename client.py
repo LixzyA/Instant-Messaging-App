@@ -5,6 +5,8 @@ from tkinter.ttk import * #Tkinter Python Module for GUI
 from tkinter import messagebox
 from functools import partial
 from PIL import Image, ImageTk
+from PIL import ImageTk
+from PIL import Image
 
 def read_csv(name:str):
     file = open(name, 'r').readline()
@@ -21,13 +23,9 @@ class GUI:
         self.enter_text_widget = None
         self.join_button = None
         self.chat_selected = None
-
         self.initialize_socket()
         self.initialize_gui()
         self.listen_for_incoming_messages_in_a_thread()
-
-    def login(self):
-        pass
 
     def initialize_socket(self):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # initialazing socket with TCP and IPv4
@@ -45,15 +43,21 @@ class GUI:
         
     def show_menu(self):
         menu = Frame(self.root)
-        add_friend_button = Button(menu, text='Add Friend', command=partial(self.add_friend, menu))
-        # exit_image = PhotoImage(file = r'Resources/exit.png')
-        #Exit Button
-        # exit_button = Button(menu, image=exit_image, command=self.root.quit())
         menu.pack(side='left')
+        add_friend_image = Image.open('Resources/addfriend.png')  
+        add_friend_image = add_friend_image.resize((30, 30))  
+        add_friend_photo = ImageTk.PhotoImage(add_friend_image)
+        add_friend_button = Button(menu, image=add_friend_photo, command=partial(self.add_friend, menu))
+        add_friend_button.photo = add_friend_photo  
         add_friend_button.pack()
-        # exit_button.pack()
-
-
+        #Exit Button
+        exit_image = Image.open('Resources/log out button white.png')  
+        exit_image = exit_image.resize((30, 30))
+        exit_photo = ImageTk.PhotoImage(exit_image)
+        exit_button = Button(menu, image=exit_photo, command=self.on_close_window)
+        exit_button.image = exit_photo 
+        exit_button.pack()
+        
 
     def add_friend(self, menu):
         # Create a frame widget with a blue background
@@ -190,8 +194,8 @@ class GUI:
 
     def on_close_window(self):
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
-            self.root.destroy()
             self.client_socket.close()
+            self.root.destroy()
             exit(0)
     
 
