@@ -5,12 +5,10 @@ from tkinter.ttk import * #Tkinter Python Module for GUI
 from tkinter import messagebox
 from functools import partial
 from PIL import Image, ImageTk
-from PIL import ImageTk
-from PIL import Image
 
 def read_csv(name:str):
     file = open(name, 'r').readline()
-    return file.split('')
+    return file.split(',')
 
 class GUI:
     client_socket = None
@@ -19,23 +17,58 @@ class GUI:
     def __init__(self, master):
         self.root = master
         self.chat_transcript_area = None
-        self.name_widget = None
+        self.name = None
         self.enter_text_widget = None
         self.join_button = None
         self.chat_selected = None
-        self.initialize_socket()
-        self.initialize_gui()
-        self.listen_for_incoming_messages_in_a_thread()
+        self.friend_list = None
+        self.login_form()
+        
 
-    def initialize_socket(self):
-        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # initialazing socket with TCP and IPv4
-        remote_ip = '127.0.0.1' # IP address 
-        remote_port = 10319 #TCP port
-        self.client_socket.connect((remote_ip, remote_port)) #connect to the remote server
-
-    def initialize_gui(self): # GUI initializer
+    def login_form(self):
         self.root.title("Socket Chat") 
         self.root.resizable(0, 0)
+        self.root.geometry('700x350')
+
+        self.frame = Frame(self.root)
+        self.frame.place(relx=0.5, rely=0.5, anchor='center')
+        self.e = Entry(self.frame)
+        self.e.insert(0, 'Enter your username')
+        self.e.pack()
+        self.b = Button(self.frame, text='Login', command = self.login)
+        self.b.pack()
+        
+
+    def login(self):
+        if self.e.get() != 'Enter your username':
+            self.name = self.e.get()
+            self.e.destroy()
+            self.b.destroy()
+            self.frame.destroy()
+            self.initialize_socket()
+        else:
+            Label(text='Username has to be unique!')
+
+    def initialize_socket(self):
+        try:
+            self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # initialazing socket with TCP and IPv4
+            remote_ip = '127.0.0.1' # IP address 
+            remote_port = 10319 #TCP port
+            self.client_socket.connect((remote_ip, remote_port)) #connect to the remote server
+            self.initialize_gui()
+            self.listen_for_incoming_messages_in_a_thread()
+        except:
+            frame = Frame().place(relx=0.5, rely=0.5, anchor='center')
+            Label(frame, text='Failed to connect to server!').pack()
+            Button(frame, text='Ok', command=self.quit).pack()
+            
+
+    def quit(self):
+        self.root.destroy()
+        self.client_socket.close()
+        exit(0)
+
+    def initialize_gui(self): # GUI initializer
         self.show_menu()
         self.show_friend()
         self.display_chat_box('Jisoo')
@@ -43,21 +76,15 @@ class GUI:
         
     def show_menu(self):
         menu = Frame(self.root)
-        menu.pack(side='left')
-        add_friend_image = Image.open('Resources/addfriend.png')  
-        add_friend_image = add_friend_image.resize((30, 30))  
-        add_friend_photo = ImageTk.PhotoImage(add_friend_image)
-        add_friend_button = Button(menu, image=add_friend_photo, command=partial(self.add_friend, menu))
-        add_friend_button.photo = add_friend_photo  
-        add_friend_button.pack()
+        add_friend_button = Button(menu, text='Add Friend', command=partial(self.add_friend, menu))
+        # exit_image = PhotoImage(file = r'Resources/exit.png')
         #Exit Button
-        exit_image = Image.open('Resources/log out button white.png')  
-        exit_image = exit_image.resize((30, 30))
-        exit_photo = ImageTk.PhotoImage(exit_image)
-        exit_button = Button(menu, image=exit_photo, command=self.on_close_window)
-        exit_button.image = exit_photo 
-        exit_button.pack()
-        
+        # exit_button = Button(menu, image=exit_image, command=self.root.quit())
+        menu.pack(side='left')
+        add_friend_button.pack()
+        # exit_button.pack()
+
+
 
     def add_friend(self, menu):
         # Create a frame widget with a blue background
@@ -97,17 +124,14 @@ class GUI:
         friends = Frame(self.root)
         friends.pack(side='left', fill='both')
 
-        friend_list = None
         try:
-            friend_list = read_csv('Data/friends.data')
-            for friend in friend_list:
-                button = Button(friends, text= friend, command=self.show_chat(friend), )
+            self.friend_list = read_csv('data/friends.data')
+            for friend in self.friend_list:
+                button = Button(friends, text= friend, command=self.show_chat(friend))
                 button.pack(anchor='n')
         except:
             friends.pack(side='left', fill='none')
             label = Label(friends, text = 'Add a friend').pack()
-        
-        return friends
 
     def show_chat(self, name: str):
         pass
@@ -165,17 +189,17 @@ class GUI:
     
 
     def on_join(self):
-        if len(self.name_widget.get()) == 0:
-            messagebox.showerror(
-                "Enter your name", "Enter your name to send a message")
-            return
-        self.name_widget.config(state='disabled')
-        self.client_socket.send(("joined:" + self.name_widget.get()).encode('utf-8'))
+        # if len(self.name_widget.get()) == 0:
+        #     messagebox.showerror(
+        #         "Enter your name", "Enter your name to send a message")
+        #     return
+        # self.name_widget.config(state='disabled')
+        self.client_socket.send(("joined:" + self.name).encode('utf-8'))
 
     def on_enter_key_pressed(self, event):
-        if len(self.name_widget.get()) == 0:
-            messagebox.showerror("Enter your name", "Enter your name to send a message")
-            return
+        # if len(self.name_widget.get()) == 0:
+        #     messagebox.showerror("Enter your name", "Enter your name to send a message")
+        #     return
         self.send_chat()
         self.clear_text()
 
@@ -183,7 +207,7 @@ class GUI:
         self.enter_text_widget.delete(1.0, 'end')
 
     def send_chat(self):
-        senders_name = self.name_widget.get().strip() + ": "
+        senders_name = self.name + ": "
         data = self.enter_text_widget.get(1.0, 'end').strip()
         message = (senders_name + data).encode('utf-8')
         self.chat_transcript_area.insert('end', message.decode('utf-8') + '\n')
@@ -194,8 +218,8 @@ class GUI:
 
     def on_close_window(self):
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
-            self.client_socket.close()
             self.root.destroy()
+            self.client_socket.close()
             exit(0)
     
 
