@@ -155,12 +155,22 @@ class GUI:
 
         try:
             self.friend_list = read_csv('data/friends.data')
+            style = Style()
+            style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
+            
             for friend in self.friend_list:
-                button = Button(friends, text= friend, command=self.show_chat(friend))
+                
+                add_contact_image = Image.open("Resources\profile.png")  
+                add_contact_image = add_contact_image.resize((30, 30))  
+                add_contact_photo = ImageTk.PhotoImage(add_contact_image)    
+                #friend button
+                button = Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
+                button.image = add_contact_photo
                 button.pack(anchor='n')
+        
         except:
             friends.pack(side='left', fill='none')
-            label = Label(friends, text = 'Add a friend').pack()
+            Label(friends, text = 'Add a friend').pack()
 
     def show_chat(self, name: str):
         pass
