@@ -2,6 +2,7 @@ import socket #Sockets for network connection
 import threading # for multiple proccess 
 from tkinter import * #Tkinter Python Module for GUI 
 from tkinter.ttk import * #Tkinter Python Module for GUI 
+import tkinter as tk
 from tkinter import messagebox
 from functools import partial
 from PIL import Image, ImageTk
@@ -66,12 +67,14 @@ class GUI:
             self.name = self.e.get()
             self.e.destroy()
             self.b.destroy()
+            self.label.destroy()
+            self.logo_label.destroy()
             self.frame.destroy()
             self.initialize_socket()
         else:
             Label(text='Username has to be unique!')
 
-   def initialize_socket(self):
+    def initialize_socket(self):
         try:
             self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # initialazing socket with TCP and IPv4
             remote_ip = '127.0.0.1' # IP address 
@@ -138,30 +141,18 @@ class GUI:
         exit_button.configure(style="Gray.TButton")
         exit_button.image = exit_photo 
         exit_button.pack(side='bottom', anchor='sw', pady=(0, 10))
-)
-
 
 
     def add_friend(self, menu):
-        # Create a frame widget with a blue background
         frame1 = Frame(menu)
         frame1.pack(padx=20, pady=20)
-        # Create an entry widget and assign it to a variable
-        e = Entry(frame1)
-        # Add the entry widget to the frame widget
-        e.pack()
-
+        self.add_friend_entry = Entry(frame1)
         name = []
-        # Create a button widget and assign it to a variable
-        b = Button(frame1, text='search', command=partial (self.submit, e, name))
-        # Add the button widget to the frame widget
-        b.pack()
+        self.add_friend_button = Button(frame1, text='search', command=self.submit)
 
-        print(name)
-
-
-    def submit(self, ent, var):
-        var += ent.get()
+    def submit(self):
+        self.add_friend_button.pack()
+        self.add_friend_entry.pack()
 
 
     def save_friend(self, name:str):
@@ -297,6 +288,7 @@ class GUI:
             self.client_socket.close()
             exit(0)
     
+
 logger = logging.getLogger()
 #the mail function 
 if __name__ == '__main__':
