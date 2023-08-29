@@ -76,9 +76,15 @@ class GUI:
     def initialize_gui(self): # GUI initializer
         self.show_menu()
         self.show_friend()
-        self.display_chat_box('Jisoo')
-        self.display_chat_entry_box()
-        
+        if self.friend_list != None:
+            self.display_chat_box(self.friend_list[0])
+            self.display_chat_entry_box()
+        else:
+            f = Frame()
+            Label(f, text="Welcome to Barudak Chat!").pack()
+            Label(f, text="Add a friend to start Chatting!").pack()
+            f.pack(expand=True)
+
     def show_menu(self):
         #Add friend Button
         menu = Frame(self.root)
@@ -156,8 +162,9 @@ class GUI:
         friends.pack(side='left', fill='both')
         try:
             if stat('data/'+ self.name +'/friends.data').st_size == 0:
-                friends.pack(side='left', fill='none')
-                Label(friends, text = 'Add a friend').pack()
+                # friends.pack(side='left', fill='none')
+                # Label(friends, text = 'Add a friend').pack()
+                pass
             else:
                 self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
                 style = Style()
