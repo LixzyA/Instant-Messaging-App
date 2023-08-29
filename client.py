@@ -6,7 +6,7 @@ from tkinter import messagebox
 import tkinter as tk
 from functools import partial
 from PIL import Image, ImageTk
-from os import mkdir, stat
+from os import mkdir, stat, error
 from os.path import join
 import logging
 
@@ -96,11 +96,17 @@ class GUI:
         exit(0)
 
     def initialize_gui(self): # GUI initializer
-        self.root.geometry('700x350')
+        self.root.geometry('800x400')
         self.show_menu()
         self.show_friend()
-        self.display_chat_box('Jisoo')
-        self.display_chat_entry_box()
+        if self.friend_list != None:
+            self.display_chat_box('Jisoo')
+            self.display_chat_entry_box()
+        else:
+            f = Frame()
+            Label(f, text='Welcome to Barudak Chat!').pack()
+            Label(f, text='Add a friend now to start Chatting!').pack()
+            f.pack(expand=True)
         
     def show_menu(self):
         #Add friend Button
@@ -109,12 +115,12 @@ class GUI:
         add_friend_image = Image.open('Resources/addfriend.png')  
         add_friend_image = add_friend_image.resize((40, 40))  
         add_friend_photo = ImageTk.PhotoImage(add_friend_image)
-        add_friend_button = Button(menu, image=add_friend_photo, command=partial(self.add_friend, menu))
+        self.add_friend_button = Button(menu, image=add_friend_photo, command=partial(self.add_friend, menu))
         style = Style()
         style.configure("Gray.TButton", background="gray")  # Define a new style with gray background
-        add_friend_button.configure(style="Gray.TButton")
-        add_friend_button.photo = add_friend_photo  
-        add_friend_button.pack(anchor='w')
+        self.add_friend_button.configure(style="Gray.TButton")
+        self.add_friend_button.photo = add_friend_photo  
+        self.add_friend_button.pack(anchor='w')
 
         # Setting Button
         setting_image = Image.open('Resources/setting button.png')
@@ -145,8 +151,8 @@ class GUI:
         def on_button_leave(event):
             self.root.config(cursor='')  
 
-        add_friend_button.bind("<Enter>", on_button_hover) 
-        add_friend_button.bind("<Leave>", on_button_leave) 
+        self.add_friend_button.bind("<Enter>", on_button_hover) 
+        self.add_friend_button.bind("<Leave>", on_button_leave) 
 
         setting_button.bind("<Enter>", on_button_hover)  
         setting_button.bind("<Leave>", on_button_leave)  
@@ -162,6 +168,7 @@ class GUI:
 
 
     def add_friend(self, menu):
+        self.add_friend_button['state'] = tk.DISABLED
         # Create a frame widget with a blue background
         frame1 = Frame(menu)
         frame1.pack(padx=20, pady=20)
@@ -203,7 +210,6 @@ class GUI:
 
 
         friends = Frame(self.root)
-        friends.pack(side='left', fill='both')
 
         style = Style()
         style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
@@ -212,6 +218,7 @@ class GUI:
                 self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
             
             for friend in self.friend_list:
+                friends.pack(side='left', fill='both')
                 add_contact_image = Image.open("Resources\profile.png")  
                 add_contact_image = add_contact_image.resize((30, 30))  
                 add_contact_photo = ImageTk.PhotoImage(add_contact_image)    
@@ -228,6 +235,9 @@ class GUI:
             mkdir(path)
             file = open(path +'/friends.data', 'x')
             self.show_friend()
+        
+        except:
+            pass
 
     def show_chat(self, name: str):
         pass
