@@ -3,11 +3,13 @@ import threading # for multiple proccess
 from tkinter import * #Tkinter Python Module for GUI 
 from tkinter.ttk import * #Tkinter Python Module for GUI 
 from tkinter import messagebox
+import tkinter as tk
 from functools import partial
 from PIL import Image, ImageTk
 from os import mkdir, stat
 from os.path import join
 import logging
+
 
 def read_csv(name:str):
     file = open(name, 'r').readline()
@@ -27,26 +29,47 @@ class GUI:
         self.friend_list = None
         self.login_form()
         
+    def on_entry_click(self, event): # Function to Clear the background text when clicked
+        if self.e.get() == 'Enter your username':
+            self.e.delete(0, tk.END)
+            self.e.config(fg='black')
+
 
     def login_form(self):
         self.root.title("Socket Chat") 
         self.root.resizable(0, 0)
-        self.root.geometry('700x350')
+        self.root.geometry('300x420')
+        self.root.configure(bg="white")
 
-        self.frame = Frame(self.root)
-        self.frame.place(relx=0.5, rely=0.5, anchor='center')
-        self.e = Entry(self.frame)
+        label_font = ("ubuntu", 30)
+        self.label = tk.Label(root, text="BARUDAK CHAT", bg="white", font = label_font)
+        self.label.place(relx=0.5, rely=0.12, anchor='center')
+
+        self.logo_image = Image.open('Resources/logo.png') 
+        self.logo_image = self.logo_image.resize((130, 130))  
+        self.logo_photo = ImageTk.PhotoImage(self.logo_image) 
+        self.logo_label = tk.Label(root, image=self.logo_photo, bg="white")
+        self.logo_label.place(relx=0.5, rely=0.385, anchor='center')
+
+        
+        self.frame = tk.Frame(self.root, bg="white")
+        self.frame.place(relx=0.5, rely=0.7, anchor='center')
+        self.e = tk.Entry(self.frame)
         self.e.insert(0, 'Enter your username')
-        self.e.pack()
-        self.b = Button(self.frame, text='Login', command = self.login)
+        self.e.bind("<FocusIn>", self.on_entry_click)
+        self.e.pack(pady=30)
+        button_font = ("Times New Roman", 20)
+        self.b = tk.Button(self.frame, text='Login', fg="white", padx=50, pady=1, font=button_font, command = self.login, bg="#4DD913")
         self.b.pack()
         
 
     def login(self):
-        if self.e.get() != 'Enter your username':
+        if self.e.get() not in ['Enter your username', '']:
             self.name = self.e.get()
             self.e.destroy()
             self.b.destroy()
+            self.label.destroy()
+            self.logo_label.destroy()
             self.frame.destroy()
             self.initialize_socket()
         else:
@@ -73,6 +96,7 @@ class GUI:
         exit(0)
 
     def initialize_gui(self): # GUI initializer
+        self.root.geometry('700x350')
         self.show_menu()
         self.show_friend()
         self.display_chat_box('Jisoo')
@@ -130,6 +154,11 @@ class GUI:
         exit_button.bind("<Enter>", on_button_hover) 
         exit_button.bind("<Leave>", on_button_leave) 
 
+    # def on_enter(event):
+    #     b.config(bg="#C4C4C4", fg="white")
+
+    # def on_leave(event):
+    #     b.config(bg="white", fg="black")
 
 
     def add_friend(self, menu):
@@ -143,9 +172,13 @@ class GUI:
 
         name = []
         # Create a button widget and assign it to a variable
-        b = Button(frame1, text='search', command=partial (self.submit, e, name))
+        b = tk.Button(frame1, text='search', command=partial (self.submit, e, name))
         # Add the button widget to the frame widget
         b.pack()
+
+        # b.bind("<Enter>", on_enter)
+        # b.bind("<Leave>", on_leave)
+
 
         print(name)
 
@@ -166,26 +199,27 @@ class GUI:
             file.close()
      
 
-
     def show_friend(self):
+
+
         friends = Frame(self.root)
         friends.pack(side='left', fill='both')
-        style = Style()
-        style.configure("Custom.TButton", font=("Verdana", 10), anchor='w')
 
+        style = Style()
+        style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
         try:
             if stat('data/'+ self.name +'/friends.data').st_size != 0:
-                self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')            
-
-                for friend in self.friend_list:    
-                    add_contact_image = Image.open("Resources\profile.png")  
-                    add_contact_image = add_contact_image.resize((30, 30))  
-                    add_contact_photo = ImageTk.PhotoImage(add_contact_image)    
-                    # friend button
-                    button = Button(friends, text=friend, command=self.show_chat(friend), padding=(10, 8, 10, 8), style="Custom.TButton", image=add_contact_photo, compound=LEFT, )
-                    button.image = add_contact_photo
-                    button.pack(anchor='n')
-
+                self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
+            
+            for friend in self.friend_list:
+                add_contact_image = Image.open("Resources\profile.png")  
+                add_contact_image = add_contact_image.resize((30, 30))  
+                add_contact_photo = ImageTk.PhotoImage(add_contact_image)    
+                #friend button
+                button = Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
+                button.image = add_contact_photo
+                button.pack(anchor='n')
+        
         except FileNotFoundError as e:
             logger.exception(e)
             parent_dir = 'data/'
@@ -198,7 +232,7 @@ class GUI:
     def show_chat(self, name: str):
         pass
         
-    def display_chat_box(self, name: str):
+    def display_chat_box(self, name:str): 
         self.chat_selected = name
         frame = Frame()
         Label(frame, text=self.chat_selected).pack(side='top', anchor='w')
@@ -209,6 +243,7 @@ class GUI:
         self.chat_transcript_area.pack(side='left', padx=10)
         scrollbar.pack(side='right', fill='y')
         frame.pack(side='top')
+
         chat_history = None
         try:
             chat_history = open('data/Chat/' + name + '.data', 'r')
@@ -283,7 +318,6 @@ class GUI:
             self.client_socket.close()
             exit(0)
     
-
 logger = logging.getLogger()
 #the mail function 
 if __name__ == '__main__':
