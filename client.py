@@ -163,14 +163,14 @@ class GUI:
                 style = Style()
                 style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
             
-            for friend in self.friend_list:
-                add_contact_image = Image.open("Resources\profile.png")  
-                add_contact_image = add_contact_image.resize((30, 30))  
-                add_contact_photo = ImageTk.PhotoImage(add_contact_image)    
-                #friend button
-                button = Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
-                button.image = add_contact_photo
-                button.pack(anchor='n')
+                for friend in self.friend_list:
+                    add_contact_image = Image.open("Resources\profile.png")  
+                    add_contact_image = add_contact_image.resize((30, 30))  
+                    add_contact_photo = ImageTk.PhotoImage(add_contact_image)    
+                    #friend button
+                    button = Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
+                    button.image = add_contact_photo
+                    button.pack(anchor='n')
 
         except FileNotFoundError as e:
             logger.exception(e)
@@ -178,8 +178,7 @@ class GUI:
             dir = self.name
             path = join(parent_dir, dir)
             mkdir(path)
-            file = open(path + '/friends.data', 'w')
-            file.close()
+            file = open(path +'/friends.data', 'x')
             self.show_friend()
                 
 
