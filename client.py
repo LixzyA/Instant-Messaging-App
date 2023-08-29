@@ -5,11 +5,14 @@ from tkinter.ttk import * #Tkinter Python Module for GUI
 from tkinter import messagebox
 from functools import partial
 from PIL import Image, ImageTk
-from tkinter import ttk
+from os import mkdir, stat
+from os.path import join
+import logging
 
 def read_csv(name:str):
-    file = open(name, 'r').readline()
-    return file.split(',')
+    file = open(name, 'r')
+    return file.readline().split(',')
+
 
 class GUI:
     client_socket = None
@@ -58,10 +61,11 @@ class GUI:
             self.client_socket.connect((remote_ip, remote_port)) #connect to the remote server
             self.initialize_gui()
             self.listen_for_incoming_messages_in_a_thread()
-        except:
+        except Exception as e:
+            logger.exception(str(e))
             frame = Frame().place(relx=0.5, rely=0.5, anchor='center')
             Label(frame, text='Failed to connect to server!').pack()
-            Button(frame, text='Ok', command=self.quit).pack()
+            Button(frame, text='Quit', command=self.quit).pack()
             
 
     def quit(self):
@@ -83,29 +87,29 @@ class GUI:
         add_friend_image = add_friend_image.resize((40, 40))  
         add_friend_photo = ImageTk.PhotoImage(add_friend_image)
         add_friend_button = Button(menu, image=add_friend_photo, command=partial(self.add_friend, menu))
-        style = ttk.Style()
+        style = Style()
         style.configure("Gray.TButton", background="gray")  # Define a new style with gray background
         add_friend_button.configure(style="Gray.TButton")
         add_friend_button.photo = add_friend_photo  
         add_friend_button.pack(anchor='w')
-        
+
         # Setting Button
         setting_image = Image.open('Resources/setting button.png')
         setting_image = setting_image.resize((40, 40))
         setting_photo = ImageTk.PhotoImage(setting_image)
         setting_button = Button(menu, image=setting_photo)
-        style = ttk.Style()
+        style = Style()
         style.configure("Gray.TButton", background="gray")  # Define a new style with gray background
         setting_button.configure(style="Gray.TButton")
         setting_button.image = setting_photo  # Store a reference to the image
         setting_button.pack(anchor='w')
-        
+
         #Exit Button
         exit_image = Image.open('Resources/log out button white.png')  
         exit_image = exit_image.resize((40, 40))
         exit_photo = ImageTk.PhotoImage(exit_image)
         exit_button = Button(menu, image=exit_photo, command=self.on_close_window)
-        style = ttk.Style()
+        style = Style()
         style.configure("Gray.TButton", background="gray", padding=(-3, -3, -3, -3))  # Define a new style with gray background
         exit_button.configure(style="Gray.TButton")
         exit_button.image = exit_photo 
@@ -113,10 +117,8 @@ class GUI:
 
 
 
-
-
     def add_friend(self, menu):
-        # Create a frame widget with a blue background
+        # Create a frame widget
         frame1 = Frame(menu)
         frame1.pack(padx=20, pady=20)
         # Create an entry widget and assign it to a variable
@@ -152,14 +154,16 @@ class GUI:
     def show_friend(self):
         friends = Frame(self.root)
         friends.pack(side='left', fill='both')
-
         try:
-            self.friend_list = read_csv('data/friends.data')
-            style = Style()
-            style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
+            if stat('data/'+ self.name +'/friends.data').st_size == 0:
+                friends.pack(side='left', fill='none')
+                Label(friends, text = 'Add a friend').pack()
+            else:
+                self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
+                style = Style()
+                style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
             
             for friend in self.friend_list:
-                
                 add_contact_image = Image.open("Resources\profile.png")  
                 add_contact_image = add_contact_image.resize((30, 30))  
                 add_contact_photo = ImageTk.PhotoImage(add_contact_image)    
@@ -167,18 +171,25 @@ class GUI:
                 button = Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
                 button.image = add_contact_photo
                 button.pack(anchor='n')
-        
-        except:
-            friends.pack(side='left', fill='none')
-            Label(friends, text = 'Add a friend').pack()
+
+        except FileNotFoundError as e:
+            logger.exception(e)
+            parent_dir = 'data/'
+            dir = self.name
+            path = join(parent_dir, dir)
+            mkdir(path)
+            file = open(path + '/friends.data', 'w')
+            file.close()
+            self.show_friend()
+                
 
     def show_chat(self, name: str):
         pass
         
-    def display_chat_box(self, name:str):
+    def display_chat_box(self, name: str):
         self.chat_selected = name
         frame = Frame()
-        Label(frame).pack(side='top', anchor='w')
+        Label(frame, text=self.chat_selected).pack(side='top', anchor='w')
         self.chat_transcript_area = Text(frame, width=60, height=10, font=("Serif", 12))
         scrollbar = Scrollbar(frame, command=self.chat_transcript_area.yview, orient=VERTICAL)
         self.chat_transcript_area.config(yscrollcommand=scrollbar.set)
@@ -193,6 +204,7 @@ class GUI:
         except:
             pass
         
+
     def display_chat_entry_box(self):
         frame = Frame()
         Label(frame, text='Enter message:', font=("Serif", 12)).pack(side='top', anchor='w')
@@ -261,6 +273,7 @@ class GUI:
             exit(0)
     
 
+logger = logging.getLogger()
 #the mail function 
 if __name__ == '__main__':
     root = Tk()
