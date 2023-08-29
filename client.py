@@ -3,9 +3,9 @@ import threading # for multiple proccess
 from tkinter import * #Tkinter Python Module for GUI 
 from tkinter.ttk import * #Tkinter Python Module for GUI 
 from tkinter import messagebox
-
 from functools import partial
 from PIL import Image, ImageTk
+from tkinter import ttk
 
 def read_csv(name:str):
     file = open(name, 'r').readline()
@@ -76,21 +76,42 @@ class GUI:
         self.display_chat_entry_box()
         
     def show_menu(self):
+        #Add friend Button
         menu = Frame(self.root)
-        menu.pack(side='left')
+        menu.pack(side='left', padx=10, pady=10, fill='y')
         add_friend_image = Image.open('Resources/addfriend.png')  
-        add_friend_image = add_friend_image.resize((30, 30))  
+        add_friend_image = add_friend_image.resize((40, 40))  
         add_friend_photo = ImageTk.PhotoImage(add_friend_image)
         add_friend_button = Button(menu, image=add_friend_photo, command=partial(self.add_friend, menu))
+        style = ttk.Style()
+        style.configure("Gray.TButton", background="gray")  # Define a new style with gray background
+        add_friend_button.configure(style="Gray.TButton")
         add_friend_button.photo = add_friend_photo  
-        add_friend_button.pack()
+        add_friend_button.pack(anchor='w')
+        
+        # Setting Button
+        setting_image = Image.open('Resources/setting button.png')
+        setting_image = setting_image.resize((40, 40))
+        setting_photo = ImageTk.PhotoImage(setting_image)
+        setting_button = Button(menu, image=setting_photo)
+        style = ttk.Style()
+        style.configure("Gray.TButton", background="gray")  # Define a new style with gray background
+        setting_button.configure(style="Gray.TButton")
+        setting_button.image = setting_photo  # Store a reference to the image
+        setting_button.pack(anchor='w')
+        
         #Exit Button
         exit_image = Image.open('Resources/log out button white.png')  
-        exit_image = exit_image.resize((30, 30))
+        exit_image = exit_image.resize((40, 40))
         exit_photo = ImageTk.PhotoImage(exit_image)
         exit_button = Button(menu, image=exit_photo, command=self.on_close_window)
+        style = ttk.Style()
+        style.configure("Gray.TButton", background="gray", padding=(-3, -3, -3, -3))  # Define a new style with gray background
+        exit_button.configure(style="Gray.TButton")
         exit_button.image = exit_photo 
-        exit_button.pack()
+        exit_button.pack(side='bottom', anchor='sw', pady=(0, 10))
+
+
 
 
 
@@ -154,7 +175,7 @@ class GUI:
     def show_chat(self, name: str):
         pass
         
-    def display_chat_box(self, name:str): 
+    def display_chat_box(self, name:str):
         self.chat_selected = name
         frame = Frame()
         Label(frame).pack(side='top', anchor='w')
@@ -172,7 +193,6 @@ class GUI:
         except:
             pass
         
-
     def display_chat_entry_box(self):
         frame = Frame()
         Label(frame, text='Enter message:', font=("Serif", 12)).pack(side='top', anchor='w')
