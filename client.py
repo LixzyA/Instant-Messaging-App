@@ -9,10 +9,10 @@ from os import mkdir, stat
 from os.path import join
 import logging
 
-
 def read_csv(name:str):
-    file = open(name, 'r').readline()
-    return file.split(',')
+    file = open(name, 'r')
+    return file.readline().split(',')
+
 
 class GUI:
     client_socket = None
@@ -28,41 +28,23 @@ class GUI:
         self.friend_list = None
         self.login_form()
         
-    def on_entry_click(self, event): # Function to Clear the background text when clicked
-        if self.e.get() == 'Enter your username':
-            self.e.delete(0, tk.END)
-            self.e.config(fg='black')
 
     def login_form(self):
         self.root.title("Socket Chat") 
         self.root.resizable(0, 0)
-        self.root.geometry('300x420')
-        self.root.configure(bg="white")
+        self.root.geometry('700x350')
 
-        label_font = ("ubuntu", 30)
-        self.label = tk.Label(root, text="BARUDAK CHAT", bg="white", font = label_font)
-        self.label.place(relx=0.5, rely=0.12, anchor='center')
-
-        self.logo_image = Image.open('Resources/logo.png') 
-        self.logo_image = self.logo_image.resize((130, 130))  
-        self.logo_photo = ImageTk.PhotoImage(self.logo_image) 
-        self.logo_label = tk.Label(root, image=self.logo_photo, bg="white")
-        self.logo_label.place(relx=0.5, rely=0.385, anchor='center')
-
-        
-        self.frame = tk.Frame(self.root, bg="white")
-        self.frame.place(relx=0.5, rely=0.7, anchor='center')
-        self.e = tk.Entry(self.frame)
+        self.frame = Frame(self.root)
+        self.frame.place(relx=0.5, rely=0.5, anchor='center')
+        self.e = Entry(self.frame)
         self.e.insert(0, 'Enter your username')
-        self.e.bind("<FocusIn>", self.on_entry_click)
-        self.e.pack(pady=30)
-        button_font = ("Times New Roman", 20)
-        self.b = tk.Button(self.frame, text='Login', fg="white", padx=50, pady=1, font=button_font, command = self.login, bg="#4DD913")
+        self.e.pack()
+        self.b = Button(self.frame, text='Login', command = self.login)
         self.b.pack()
         
 
     def login(self):
-        if self.e.get() not in ['Enter your username', '']:
+        if self.e.get() != 'Enter your username':
             self.name = self.e.get()
             self.e.destroy()
             self.b.destroy()
@@ -71,7 +53,7 @@ class GUI:
         else:
             Label(text='Username has to be unique!')
 
-   def initialize_socket(self):
+    def initialize_socket(self):
         try:
             self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # initialazing socket with TCP and IPv4
             remote_ip = '127.0.0.1' # IP address 
@@ -84,6 +66,7 @@ class GUI:
             frame = Frame().place(relx=0.5, rely=0.5, anchor='center')
             Label(frame, text='Failed to connect to server!').pack()
             Button(frame, text='Quit', command=self.quit).pack()
+            
 
     def quit(self):
         self.root.destroy()
@@ -91,18 +74,12 @@ class GUI:
         exit(0)
 
     def initialize_gui(self): # GUI initializer
-        self.root.geometry('700x350')
         self.show_menu()
         self.show_friend()
-        if self.friend_list != None:
-            self.display_chat_box(self.friend_list[0])
-            self.display_chat_entry_box()
-        else:
-            f = Frame()
-            Label(f, text="Welcome to Barudak Chat!").pack()
-            Label(f, text="Add a friend to start Chatting!").pack()
-            f.pack(expand=True)
-
+        self.display_chat_box('Jisoo')
+        self.display_chat_entry_box()
+        
+        
     def show_menu(self):
         #Add friend Button
         menu = Frame(self.root)
@@ -138,12 +115,25 @@ class GUI:
         exit_button.configure(style="Gray.TButton")
         exit_button.image = exit_photo 
         exit_button.pack(side='bottom', anchor='sw', pady=(0, 10))
-)
+        
 
+        def on_button_hover(event):
+            self.root.config(cursor='hand2')
 
+        def on_button_leave(event):
+            self.root.config(cursor='')  
+
+        add_friend_button.bind("<Enter>", on_button_hover) 
+        add_friend_button.bind("<Leave>", on_button_leave) 
+
+        setting_button.bind("<Enter>", on_button_hover)  
+        setting_button.bind("<Leave>", on_button_leave)  
+
+        exit_button.bind("<Enter>", on_button_hover) 
+        exit_button.bind("<Leave>", on_button_leave)  
 
     def add_friend(self, menu):
-        # Create a frame widget with a blue background
+        # Create a frame widget
         frame1 = Frame(menu)
         frame1.pack(padx=20, pady=20)
         # Create an entry widget and assign it to a variable
@@ -181,9 +171,8 @@ class GUI:
         friends.pack(side='left', fill='both')
         try:
             if stat('data/'+ self.name +'/friends.data').st_size == 0:
-                # friends.pack(side='left', fill='none')
-                # Label(friends, text = 'Add a friend').pack()
-                pass
+                friends.pack(side='left', fill='none')
+                Label(friends, text = 'Add a friend').pack()
             else:
                 self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
                 style = Style()
@@ -206,7 +195,7 @@ class GUI:
             mkdir(path)
             file = open(path +'/friends.data', 'x')
             self.show_friend()
-       
+                
 
     def show_chat(self, name: str):
         pass
@@ -297,6 +286,7 @@ class GUI:
             self.client_socket.close()
             exit(0)
     
+
 logger = logging.getLogger()
 #the mail function 
 if __name__ == '__main__':
