@@ -9,10 +9,10 @@ from os import mkdir, stat
 from os.path import join
 import logging
 
-def read_csv(name:str):
-    file = open(name, 'r')
-    return file.readline().split(',')
 
+def read_csv(name:str):
+    file = open(name, 'r').readline()
+    return file.split(',')
 
 class GUI:
     client_socket = None
@@ -28,23 +28,41 @@ class GUI:
         self.friend_list = None
         self.login_form()
         
+    def on_entry_click(self, event): # Function to Clear the background text when clicked
+        if self.e.get() == 'Enter your username':
+            self.e.delete(0, tk.END)
+            self.e.config(fg='black')
 
     def login_form(self):
         self.root.title("Socket Chat") 
         self.root.resizable(0, 0)
-        self.root.geometry('700x350')
+        self.root.geometry('300x420')
+        self.root.configure(bg="white")
 
-        self.frame = Frame(self.root)
-        self.frame.place(relx=0.5, rely=0.5, anchor='center')
-        self.e = Entry(self.frame)
+        label_font = ("ubuntu", 30)
+        self.label = tk.Label(root, text="BARUDAK CHAT", bg="white", font = label_font)
+        self.label.place(relx=0.5, rely=0.12, anchor='center')
+
+        self.logo_image = Image.open('Resources/logo.png') 
+        self.logo_image = self.logo_image.resize((130, 130))  
+        self.logo_photo = ImageTk.PhotoImage(self.logo_image) 
+        self.logo_label = tk.Label(root, image=self.logo_photo, bg="white")
+        self.logo_label.place(relx=0.5, rely=0.385, anchor='center')
+
+        
+        self.frame = tk.Frame(self.root, bg="white")
+        self.frame.place(relx=0.5, rely=0.7, anchor='center')
+        self.e = tk.Entry(self.frame)
         self.e.insert(0, 'Enter your username')
-        self.e.pack()
-        self.b = Button(self.frame, text='Login', command = self.login)
+        self.e.bind("<FocusIn>", self.on_entry_click)
+        self.e.pack(pady=30)
+        button_font = ("Times New Roman", 20)
+        self.b = tk.Button(self.frame, text='Login', fg="white", padx=50, pady=1, font=button_font, command = self.login, bg="#4DD913")
         self.b.pack()
         
 
     def login(self):
-        if self.e.get() != 'Enter your username':
+        if self.e.get() not in ['Enter your username', '']:
             self.name = self.e.get()
             self.e.destroy()
             self.b.destroy()
@@ -53,7 +71,7 @@ class GUI:
         else:
             Label(text='Username has to be unique!')
 
-    def initialize_socket(self):
+   def initialize_socket(self):
         try:
             self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # initialazing socket with TCP and IPv4
             remote_ip = '127.0.0.1' # IP address 
@@ -66,7 +84,6 @@ class GUI:
             frame = Frame().place(relx=0.5, rely=0.5, anchor='center')
             Label(frame, text='Failed to connect to server!').pack()
             Button(frame, text='Quit', command=self.quit).pack()
-            
 
     def quit(self):
         self.root.destroy()
@@ -74,6 +91,7 @@ class GUI:
         exit(0)
 
     def initialize_gui(self): # GUI initializer
+        self.root.geometry('700x350')
         self.show_menu()
         self.show_friend()
         self.display_chat_box('Jisoo')
@@ -114,11 +132,12 @@ class GUI:
         exit_button.configure(style="Gray.TButton")
         exit_button.image = exit_photo 
         exit_button.pack(side='bottom', anchor='sw', pady=(0, 10))
+)
 
 
 
     def add_friend(self, menu):
-        # Create a frame widget
+        # Create a frame widget with a blue background
         frame1 = Frame(menu)
         frame1.pack(padx=20, pady=20)
         # Create an entry widget and assign it to a variable
@@ -180,7 +199,7 @@ class GUI:
             mkdir(path)
             file = open(path +'/friends.data', 'x')
             self.show_friend()
-                
+       
 
     def show_chat(self, name: str):
         pass
@@ -271,7 +290,6 @@ class GUI:
             self.client_socket.close()
             exit(0)
     
-
 logger = logging.getLogger()
 #the mail function 
 if __name__ == '__main__':
