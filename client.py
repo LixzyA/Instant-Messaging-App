@@ -10,9 +10,8 @@ from os.path import join
 import logging
 
 def read_csv(name:str):
-    file = open(name, 'r')
-    return file.readline().split(',')
-
+    file = open(name, 'r').readline()
+    return file.split(',')
 
 class GUI:
     client_socket = None
@@ -79,7 +78,6 @@ class GUI:
         self.display_chat_box('Jisoo')
         self.display_chat_entry_box()
         
-        
     def show_menu(self):
         #Add friend Button
         menu = Frame(self.root)
@@ -115,7 +113,7 @@ class GUI:
         exit_button.configure(style="Gray.TButton")
         exit_button.image = exit_photo 
         exit_button.pack(side='bottom', anchor='sw', pady=(0, 10))
-        
+
 
         def on_button_hover(event):
             self.root.config(cursor='hand2')
@@ -130,10 +128,12 @@ class GUI:
         setting_button.bind("<Leave>", on_button_leave)  
 
         exit_button.bind("<Enter>", on_button_hover) 
-        exit_button.bind("<Leave>", on_button_leave)  
+        exit_button.bind("<Leave>", on_button_leave) 
+
+
 
     def add_friend(self, menu):
-        # Create a frame widget
+        # Create a frame widget with a blue background
         frame1 = Frame(menu)
         frame1.pack(padx=20, pady=20)
         # Create an entry widget and assign it to a variable
@@ -166,24 +166,23 @@ class GUI:
             file.close()
      
 
+
     def show_friend(self):
         friends = Frame(self.root)
         friends.pack(side='left', fill='both')
+        style = Style()
+        style.configure("Custom.TButton", font=("Verdana", 10), anchor='w')
+
         try:
-            if stat('data/'+ self.name +'/friends.data').st_size == 0:
-                friends.pack(side='left', fill='none')
-                Label(friends, text = 'Add a friend').pack()
-            else:
-                self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
-                style = Style()
-                style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
-            
-                for friend in self.friend_list:
+            if stat('data/'+ self.name +'/friends.data').st_size != 0:
+                self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')            
+
+                for friend in self.friend_list:    
                     add_contact_image = Image.open("Resources\profile.png")  
                     add_contact_image = add_contact_image.resize((30, 30))  
                     add_contact_photo = ImageTk.PhotoImage(add_contact_image)    
-                    #friend button
-                    button = Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
+                    # friend button
+                    button = Button(friends, text=friend, command=self.show_chat(friend), padding=(10, 8, 10, 8), style="Custom.TButton", image=add_contact_photo, compound=LEFT, )
                     button.image = add_contact_photo
                     button.pack(anchor='n')
 
@@ -195,7 +194,6 @@ class GUI:
             mkdir(path)
             file = open(path +'/friends.data', 'x')
             self.show_friend()
-                
 
     def show_chat(self, name: str):
         pass
@@ -211,7 +209,6 @@ class GUI:
         self.chat_transcript_area.pack(side='left', padx=10)
         scrollbar.pack(side='right', fill='y')
         frame.pack(side='top')
-
         chat_history = None
         try:
             chat_history = open('data/Chat/' + name + '.data', 'r')
