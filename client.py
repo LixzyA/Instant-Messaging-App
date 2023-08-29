@@ -3,6 +3,7 @@ import threading # for multiple proccess
 from tkinter import * #Tkinter Python Module for GUI 
 from tkinter.ttk import * #Tkinter Python Module for GUI 
 from tkinter import messagebox
+import tkinter as tk
 from functools import partial
 from PIL import Image, ImageTk
 from os import mkdir, stat
@@ -153,11 +154,11 @@ class GUI:
         exit_button.bind("<Enter>", on_button_hover) 
         exit_button.bind("<Leave>", on_button_leave) 
 
-    def on_enter(event):
-        b.config(bg="#C4C4C4", fg="white")
+    # def on_enter(event):
+    #     b.config(bg="#C4C4C4", fg="white")
 
-    def on_leave(event):
-        b.config(bg="white", fg="black")
+    # def on_leave(event):
+    #     b.config(bg="white", fg="black")
 
 
     def add_friend(self, menu):
@@ -175,8 +176,8 @@ class GUI:
         # Add the button widget to the frame widget
         b.pack()
 
-        b.bind("<Enter>", on_enter)
-        b.bind("<Leave>", on_leave)
+        # b.bind("<Enter>", on_enter)
+        # b.bind("<Leave>", on_leave)
 
 
         print(name)
