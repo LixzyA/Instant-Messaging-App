@@ -205,13 +205,13 @@ class GUI:
         friends = Frame(self.root)
         friends.pack(side='left', fill='both')
 
+        style = Style()
+        style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
         try:
-            self.friend_list = read_csv('data/friends.data')
-            style = Style()
-            style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
+            if stat('data/'+ self.name +'/friends.data').st_size != 0:
+                self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
             
             for friend in self.friend_list:
-                
                 add_contact_image = Image.open("Resources\profile.png")  
                 add_contact_image = add_contact_image.resize((30, 30))  
                 add_contact_photo = ImageTk.PhotoImage(add_contact_image)    
