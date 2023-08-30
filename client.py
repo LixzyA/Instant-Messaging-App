@@ -4,16 +4,17 @@ from tkinter import * #Tkinter Python Module for GUI
 from tkinter.ttk import * #Tkinter Python Module for GUI 
 import tkinter as tk
 from tkinter import messagebox
+import tkinter as tk
 from functools import partial
 from PIL import Image, ImageTk
-from os import mkdir, stat
+from os import mkdir, stat, error
 from os.path import join
 import logging
 
-def read_csv(name:str):
-    file = open(name, 'r')
-    return file.readline().split(',')
 
+def read_csv(name:str):
+    file = open(name, 'r').readline()
+    return file.split(',')
 
 class GUI:
     client_socket = None
@@ -29,10 +30,6 @@ class GUI:
         self.friend_list = None
         self.login_form()
         
-    def on_entry_click(self, event): # Function to Clear the background text when clicked
-        if self.e.get() == 'Enter your username':
-            self.e.delete(0, tk.END)
-            self.e.config(fg='black')
 
     def login_form(self):
         self.root.title("Socket Chat") 
@@ -63,7 +60,7 @@ class GUI:
         
 
     def login(self):
-        if self.e.get() != 'Enter your username':
+        if self.e.get() not in ['Enter your username', '']:
             self.name = self.e.get()
             self.e.destroy()
             self.b.destroy()
@@ -95,17 +92,11 @@ class GUI:
         exit(0)
 
     def initialize_gui(self): # GUI initializer
-        self.root.geometry('700x350')
         self.show_menu()
         self.show_friend()
-        if self.friend_list != None:
-            self.display_chat_box(self.friend_list[0])
-            self.display_chat_entry_box()
-        else:
-            f = Frame()
-            Label(f, text="Welcome to Barudak Chat!").pack()
-            Label(f, text="Add a friend to start Chatting!").pack()
-            f.pack(expand=True)
+        self.display_chat_box('Jisoo')
+        self.display_chat_entry_box()
+        
         
     def show_menu(self):
         #Add friend Button
@@ -114,12 +105,12 @@ class GUI:
         add_friend_image = Image.open('Resources/addfriend.png')  
         add_friend_image = add_friend_image.resize((40, 40))  
         add_friend_photo = ImageTk.PhotoImage(add_friend_image)
-        add_friend_button = Button(menu, image=add_friend_photo, command=partial(self.add_friend, menu))
+        self.add_friend_button = Button(menu, image=add_friend_photo, command=partial(self.add_friend, menu))
         style = Style()
         style.configure("Gray.TButton", background="gray")  # Define a new style with gray background
-        add_friend_button.configure(style="Gray.TButton")
-        add_friend_button.photo = add_friend_photo  
-        add_friend_button.pack(anchor='w')
+        self.add_friend_button.configure(style="Gray.TButton")
+        self.add_friend_button.photo = add_friend_photo  
+        self.add_friend_button.pack(anchor='w')
 
         # Setting Button
         setting_image = Image.open('Resources/setting button.png')
@@ -142,8 +133,7 @@ class GUI:
         exit_button.configure(style="Gray.TButton")
         exit_button.image = exit_photo 
         exit_button.pack(side='bottom', anchor='sw', pady=(0, 10))
-
-
+        
 
         def on_button_hover(event):
             self.root.config(cursor='hand2')
@@ -151,22 +141,32 @@ class GUI:
         def on_button_leave(event):
             self.root.config(cursor='')  
 
-        add_friend_button.bind("<Enter>", on_button_hover) 
-        add_friend_button.bind("<Leave>", on_button_leave) 
+        self.add_friend_button.bind("<Enter>", on_button_hover) 
+        self.add_friend_button.bind("<Leave>", on_button_leave) 
 
         setting_button.bind("<Enter>", on_button_hover)  
         setting_button.bind("<Leave>", on_button_leave)  
 
         exit_button.bind("<Enter>", on_button_hover) 
-        exit_button.bind("<Leave>", on_button_leave)  
+        exit_button.bind("<Leave>", on_button_leave) 
+
+    # def on_enter(event):
+    #     b.config(bg="#C4C4C4", fg="white")
+
+    # def on_leave(event):
+    #     b.config(bg="white", fg="black")
+
 
     def add_friend(self, menu):
-        # Create a frame widget with a blue background
+        # Create a frame widget
         frame1 = Frame(menu)
         frame1.pack(padx=20, pady=20)
         self.add_friend_entry = Entry(frame1)
         name = []
-        self.add_friend_button = Button(frame1, text='search', command=self.submit)
+        # Create a button widget and assign it to a variable
+        b = Button(frame1, text='search', command=self.submit)
+        # Add the button widget to the frame widget
+        b.pack()
 
     def submit(self):
         self.add_friend_button.pack()
@@ -186,23 +186,26 @@ class GUI:
      
 
     def show_friend(self):
+
+
         friends = Frame(self.root)
-        friends.pack(side='left', fill='both')
+
+        style = Style()
+        style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
         try:
             if stat('data/'+ self.name +'/friends.data').st_size != 0:
                 self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
-                style = Style()
-                style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
             
-                for friend in self.friend_list:
-                    add_contact_image = Image.open("Resources\profile.png")  
-                    add_contact_image = add_contact_image.resize((30, 30))  
-                    add_contact_photo = ImageTk.PhotoImage(add_contact_image)    
-                    #friend button
-                    button = Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
-                    button.image = add_contact_photo
-                    button.pack(anchor='n')
-
+            for friend in self.friend_list:
+                friends.pack(side='left', fill='both')
+                add_contact_image = Image.open("Resources\profile.png")  
+                add_contact_image = add_contact_image.resize((30, 30))  
+                add_contact_photo = ImageTk.PhotoImage(add_contact_image)    
+                #friend button
+                button = Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
+                button.image = add_contact_photo
+                button.pack(anchor='n')
+        
         except FileNotFoundError as e:
             logger.exception(e)
             parent_dir = 'data/'
@@ -211,12 +214,14 @@ class GUI:
             mkdir(path)
             file = open(path +'/friends.data', 'x')
             self.show_friend()
-                
+        
+        except:
+            pass
 
     def show_chat(self, name: str):
         pass
         
-    def display_chat_box(self, name: str):
+    def display_chat_box(self, name:str): 
         self.chat_selected = name
         frame = Frame()
         Label(frame, text=self.chat_selected).pack(side='top', anchor='w')
@@ -302,7 +307,6 @@ class GUI:
             self.client_socket.close()
             exit(0)
     
-
 logger = logging.getLogger()
 #the mail function 
 if __name__ == '__main__':
