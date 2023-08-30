@@ -2,7 +2,6 @@ import socket #Sockets for network connection
 import threading # for multiple proccess 
 from tkinter import * #Tkinter Python Module for GUI 
 from tkinter.ttk import * #Tkinter Python Module for GUI 
-import tkinter as tk
 from tkinter import messagebox
 import tkinter as tk
 from functools import partial
@@ -30,6 +29,11 @@ class GUI:
         self.friend_list = None
         self.login_form()
         
+    def on_entry_click(self, event): # Function to Clear the background text when clicked
+        if self.e.get() == 'Enter your username':
+            self.e.delete(0, tk.END)
+            self.e.config(fg='black')
+
 
     def login_form(self):
         self.root.title("Socket Chat") 
@@ -92,11 +96,17 @@ class GUI:
         exit(0)
 
     def initialize_gui(self): # GUI initializer
+        self.root.geometry('800x400')
         self.show_menu()
         self.show_friend()
-        self.display_chat_box('Jisoo')
-        self.display_chat_entry_box()
-        
+        if self.friend_list != None:
+            self.display_chat_box('Jisoo')
+            self.display_chat_entry_box()
+        else:
+            f = Frame()
+            Label(f, text='Welcome to Barudak Chat!').pack()
+            Label(f, text='Add a friend now to start Chatting!').pack()
+            f.pack(expand=True)
         
     def show_menu(self):
         #Add friend Button
@@ -111,6 +121,10 @@ class GUI:
         self.add_friend_button.configure(style="Gray.TButton")
         self.add_friend_button.photo = add_friend_photo  
         self.add_friend_button.pack(anchor='w')
+
+        #Add Friend entry
+        self.e = Entry(menu)
+        self.b = tk.Button(menu, text='search', command=self.submit)
 
         # Setting Button
         setting_image = Image.open('Resources/setting button.png')
@@ -133,6 +147,7 @@ class GUI:
         exit_button.configure(style="Gray.TButton")
         exit_button.image = exit_photo 
         exit_button.pack(side='bottom', anchor='sw', pady=(0, 10))
+
         
 
         def on_button_hover(event):
@@ -158,36 +173,29 @@ class GUI:
 
 
     def add_friend(self, menu):
-        # Create a frame widget
-        frame1 = Frame(menu)
-        frame1.pack(padx=20, pady=20)
-        self.add_friend_entry = Entry(frame1)
-        name = []
-        # Create a button widget and assign it to a variable
-        b = Button(frame1, text='search', command=self.submit)
-        # Add the button widget to the frame widget
-        b.pack()
+        self.add_friend_button['state'] = tk.DISABLED
+        self.e.pack(side=TOP)
+        self.b.pack(side=TOP)
+
 
     def submit(self):
-        self.add_friend_button.pack()
-        self.add_friend_entry.pack()
+        name = self.e.get()
+        if name not in [' ', '']:
+            self.save_friend(name)
+            self.e.delete(0, END)
+            self.e.pack_forget()
+            self.b.pack_forget()
+            self.add_friend_button['state'] = tk.NORMAL
+            
 
 
     def save_friend(self, name:str):
-        try:
-            file = open('Data/friends.data', 'a')
-            file.write('\n')
-            file.write(name)
-            file.close()
-        except:
-            file = open('Data/friends.data', 'a')
-            file.write(name)
-            file.close()
+        file = open('data/'+ self.name +'/friends.data', 'a')
+        file.write(name + ',')
+        file.close()    
      
 
     def show_friend(self):
-
-
         friends = Frame(self.root)
 
         style = Style()
@@ -212,7 +220,7 @@ class GUI:
             dir = self.name
             path = join(parent_dir, dir)
             mkdir(path)
-            file = open(path +'/friends.data', 'x')
+            open(path +'/friends.data', 'x')
             self.show_friend()
         
         except:
