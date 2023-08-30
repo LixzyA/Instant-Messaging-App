@@ -27,6 +27,7 @@ class GUI:
         self.join_button = None
         self.chat_selected = None
         self.friend_list = None
+        self.friend_list_button = []
         self.login_form()
         
     def on_entry_click(self, event): # Function to Clear the background text when clicked
@@ -98,9 +99,9 @@ class GUI:
     def initialize_gui(self): # GUI initializer
         self.root.geometry('800x400')
         self.show_menu()
-        self.show_friend()
+        self.show_friend(0)
         if self.friend_list != None:
-            self.display_chat_box('Jisoo')
+            self.display_chat_box(self.friend_list[0])
             self.display_chat_entry_box()
         else:
             f = Frame()
@@ -169,9 +170,6 @@ class GUI:
 
     # def on_leave(event):
     #     b.config(bg="white", fg="black")
-=======
-
-
 
     def add_friend(self, menu):
         self.add_friend_button['state'] = tk.DISABLED
@@ -187,46 +185,72 @@ class GUI:
             self.e.pack_forget()
             self.b.pack_forget()
             self.add_friend_button['state'] = tk.NORMAL
+            self.show_friend(refresh=1)
             
-
 
     def save_friend(self, name:str):
         file = open('data/'+ self.name +'/friends.data', 'a')
-        file.write(name + ',')
+        file.write(','+ name)
         file.close()    
      
 
-    def show_friend(self):
-
+    def show_friend(self, refresh:int):
 
         friends = Frame(self.root)
-
         style = Style()
         style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
-        try:
-            if stat('data/'+ self.name +'/friends.data').st_size != 0:
-                self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
+        friends.pack(side='left', fill='both')
+        add_contact_image = Image.open("Resources\profile.png")  
+        add_contact_image = add_contact_image.resize((30, 30))  
+        add_contact_photo = ImageTk.PhotoImage(add_contact_image)
+
+        if refresh == 0:
+            try:
+                if stat('data/'+ self.name +'/friends.data').st_size != 0:
+                    self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
+                
+                for index, friend in enumerate(self.friend_list):
+                    #friend button
+                    self.friend_list_button.append(Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT))
+                    self.friend_list_button[index].image = add_contact_photo
+                    self.friend_list_button[index].pack(anchor='n')
             
-            for friend in self.friend_list:
-                friends.pack(side='left', fill='both')
-                add_contact_image = Image.open("Resources\profile.png")  
-                add_contact_image = add_contact_image.resize((30, 30))  
-                add_contact_photo = ImageTk.PhotoImage(add_contact_image)    
+            except FileNotFoundError as e:
+                logger.exception(e)
+                parent_dir = 'data/'
+                dir = self.name
+                path = join(parent_dir, dir)
+                mkdir(path)
+                open(path +'/friends.data', 'x')
+                self.show_friend()
+            
+            except:
+                pass
+               
+        else: #refresh friend list
+            friends.pack_forget()
+            friends.pack(side='left', fill='both')
+
+            self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
+            for friend in self.friend_list_button:
+                friend.pack_forget()
+
+            for index, friend in enumerate(self.friend_list):
                 #friend button
-                button = Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
-                button.image = add_contact_photo
-                button.pack(anchor='n')
-        
-        except FileNotFoundError as e:
-            logger.exception(e)
-            parent_dir = 'data/'
-            dir = self.name
-            path = join(parent_dir, dir)
-            mkdir(path)
-            open(path +'/friends.data', 'x')
-            self.show_friend()
-        
-        except:
+                try:
+                    self.friend_list_button[index] = Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
+                    self.friend_list_button[index].image = add_contact_photo
+                    self.friend_list_button[index].pack(anchor='n')
+                except:
+                    self.friend_list_button.append(Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT))
+                    self.friend_list_button[index].image = add_contact_photo
+                    self.friend_list_button[index].pack(anchor='n')
+                
+
+    def refresh_friend_list(self):
+        try:
+            pass
+        except Exception as e:
             pass
 
     def show_chat(self, name: str):
