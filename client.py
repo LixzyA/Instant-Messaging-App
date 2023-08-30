@@ -122,6 +122,11 @@ class GUI:
         self.add_friend_button.photo = add_friend_photo  
         self.add_friend_button.pack(anchor='w')
 
+        #Add Friend entry
+        self.e = Entry(menu)
+        self.b = tk.Button(menu, text='search', command=self.submit)
+
+
         # Setting Button
         setting_image = Image.open('Resources/setting button.png')
         setting_image = setting_image.resize((40, 40))
@@ -144,7 +149,6 @@ class GUI:
         exit_button.image = exit_photo 
         exit_button.pack(side='bottom', anchor='sw', pady=(0, 10))
 
-
         def on_button_hover(event):
             self.root.config(cursor='hand2')
 
@@ -165,45 +169,31 @@ class GUI:
 
     # def on_leave(event):
     #     b.config(bg="white", fg="black")
+=======
+
 
 
     def add_friend(self, menu):
         self.add_friend_button['state'] = tk.DISABLED
-        # Create a frame widget with a blue background
-        frame1 = Frame(menu)
-        frame1.pack(padx=20, pady=20)
-        # Create an entry widget and assign it to a variable
-        e = Entry(frame1)
-        # Add the entry widget to the frame widget
-        e.pack()
-
-        name = []
-        # Create a button widget and assign it to a variable
-        b = tk.Button(frame1, text='search', command=partial (self.submit, e, name))
-        # Add the button widget to the frame widget
-        b.pack()
-
-        # b.bind("<Enter>", on_enter)
-        # b.bind("<Leave>", on_leave)
+        self.e.pack(side=TOP)
+        self.b.pack(side=TOP)
 
 
-        print(name)
-
-
-    def submit(self, ent, var):
-        var += ent.get()
+    def submit(self):
+        name = self.e.get()
+        if name not in [' ', '']:
+            self.save_friend(name)
+            self.e.delete(0, END)
+            self.e.pack_forget()
+            self.b.pack_forget()
+            self.add_friend_button['state'] = tk.NORMAL
+            
 
 
     def save_friend(self, name:str):
-        try:
-            file = open('Data/friends.data', 'a')
-            file.write('\n')
-            file.write(name)
-            file.close()
-        except:
-            file = open('Data/friends.data', 'a')
-            file.write(name)
-            file.close()
+        file = open('data/'+ self.name +'/friends.data', 'a')
+        file.write(name + ',')
+        file.close()    
      
 
     def show_friend(self):
@@ -233,7 +223,7 @@ class GUI:
             dir = self.name
             path = join(parent_dir, dir)
             mkdir(path)
-            file = open(path +'/friends.data', 'x')
+            open(path +'/friends.data', 'x')
             self.show_friend()
         
         except:
