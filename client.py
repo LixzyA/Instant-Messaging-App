@@ -10,10 +10,10 @@ from os import mkdir, stat
 from os.path import join
 import logging
 
-
 def read_csv(name:str):
-    file = open(name, 'r').readline()
-    return file.split(',')
+    file = open(name, 'r')
+    return file.readline().split(',')
+
 
 class GUI:
     client_socket = None
@@ -63,7 +63,7 @@ class GUI:
         
 
     def login(self):
-        if self.e.get() not in ['Enter your username', '']:
+        if self.e.get() != 'Enter your username':
             self.name = self.e.get()
             self.e.destroy()
             self.b.destroy()
@@ -87,6 +87,7 @@ class GUI:
             frame = Frame().place(relx=0.5, rely=0.5, anchor='center')
             Label(frame, text='Failed to connect to server!').pack()
             Button(frame, text='Quit', command=self.quit).pack()
+            
 
     def quit(self):
         self.root.destroy()
@@ -105,7 +106,7 @@ class GUI:
             Label(f, text="Welcome to Barudak Chat!").pack()
             Label(f, text="Add a friend to start Chatting!").pack()
             f.pack(expand=True)
-
+        
     def show_menu(self):
         #Add friend Button
         menu = Frame(self.root)
@@ -143,7 +144,24 @@ class GUI:
         exit_button.pack(side='bottom', anchor='sw', pady=(0, 10))
 
 
+
+        def on_button_hover(event):
+            self.root.config(cursor='hand2')
+
+        def on_button_leave(event):
+            self.root.config(cursor='')  
+
+        add_friend_button.bind("<Enter>", on_button_hover) 
+        add_friend_button.bind("<Leave>", on_button_leave) 
+
+        setting_button.bind("<Enter>", on_button_hover)  
+        setting_button.bind("<Leave>", on_button_leave)  
+
+        exit_button.bind("<Enter>", on_button_hover) 
+        exit_button.bind("<Leave>", on_button_leave)  
+
     def add_friend(self, menu):
+        # Create a frame widget with a blue background
         frame1 = Frame(menu)
         frame1.pack(padx=20, pady=20)
         self.add_friend_entry = Entry(frame1)
@@ -171,11 +189,7 @@ class GUI:
         friends = Frame(self.root)
         friends.pack(side='left', fill='both')
         try:
-            if stat('data/'+ self.name +'/friends.data').st_size == 0:
-                # friends.pack(side='left', fill='none')
-                # Label(friends, text = 'Add a friend').pack()
-                pass
-            else:
+            if stat('data/'+ self.name +'/friends.data').st_size != 0:
                 self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
                 style = Style()
                 style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
@@ -197,7 +211,7 @@ class GUI:
             mkdir(path)
             file = open(path +'/friends.data', 'x')
             self.show_friend()
-       
+                
 
     def show_chat(self, name: str):
         pass
