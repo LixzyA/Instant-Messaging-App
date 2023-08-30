@@ -126,6 +126,7 @@ class GUI:
         self.e = Entry(menu)
         self.b = tk.Button(menu, text='search', command=self.submit)
 
+
         # Setting Button
         setting_image = Image.open('Resources/setting button.png')
         setting_image = setting_image.resize((40, 40))
@@ -148,8 +149,6 @@ class GUI:
         exit_button.image = exit_photo 
         exit_button.pack(side='bottom', anchor='sw', pady=(0, 10))
 
-        
-
         def on_button_hover(event):
             self.root.config(cursor='hand2')
 
@@ -170,6 +169,8 @@ class GUI:
 
     # def on_leave(event):
     #     b.config(bg="white", fg="black")
+=======
+
 
 
     def add_friend(self, menu):
@@ -196,6 +197,8 @@ class GUI:
      
 
     def show_friend(self):
+
+
         friends = Frame(self.root)
 
         style = Style()
