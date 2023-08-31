@@ -8,7 +8,9 @@ from functools import partial
 from PIL import Image, ImageTk
 from os import mkdir, stat, error
 from os.path import join
+from tkinter import filedialog 
 import logging
+import os
 
 
 def read_csv(name:str):
@@ -79,6 +81,40 @@ class GUI:
         else:
             Label(text='Username has to be unique!')
 
+    
+    def change_profile(self):
+        new_name = self.e.get()
+        if new_name.strip() == '':
+            messagebox.showerror("Invalid Name", "Please enter a valid name.")
+            return
+
+        try:
+            # Rename the user profile
+            self.rename_profile(new_name)
+            self.change_profile_image()  # Call the method to change profile image
+        except Exception as e:
+            logger.exception(str(e))
+            messagebox.showerror("Profile Change Error", "An error occurred while changing the profile name.")
+            
+    def change_profile_image(self):
+        # Implement logic to allow the user to select an image and save it
+        file_path = filedialog.askopenfilename(title="Select an Image", filetypes=[("Image Files", "*.png *.jpg *.jpeg")])
+        
+    def rename_profile(self, new_name: str):
+        try:
+            old_profile_path = join('data/', self.name)
+            new_profile_path = join('data/', new_name)
+            
+            os.rename(old_profile_path, new_profile_path)
+            
+            self.name = new_name
+            self.root.title(f"Socket Chat - {self.name}")
+            
+            messagebox.showinfo("Profile Changed", f"Your profile has been changed to {new_name}.")
+        except Exception as e:
+            logger.exception(str(e))
+            raise
+        
     def initialize_socket(self):
         try:
             self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # initialazing socket with TCP and IPv4
@@ -135,11 +171,11 @@ class GUI:
         setting_image = Image.open('Resources/setting button.png')
         setting_image = setting_image.resize((40, 40))
         setting_photo = ImageTk.PhotoImage(setting_image)
-        setting_button = Button(menu, image=setting_photo)
+        setting_button = Button(menu, image=setting_photo, command=self.open_settings)
         style = Style()
-        style.configure("Gray.TButton", background="gray")  # Define a new style with gray background
+        style.configure("Gray.TButton", background="gray")
         setting_button.configure(style="Gray.TButton")
-        setting_button.image = setting_photo  # Store a reference to the image
+        setting_button.image = setting_photo
         setting_button.pack(anchor='w')
 
         #Exit Button
@@ -168,6 +204,26 @@ class GUI:
         exit_button.bind("<Enter>", on_button_hover) 
         exit_button.bind("<Leave>", on_button_leave) 
 
+    def open_settings(self):
+        settings_window = tk.Toplevel(self.root)
+        settings_window.title("Settings")
+
+        change_profile_button = Button(settings_window, text="Change Profile", command=self.show_change_profile_window)
+        change_profile_button.pack()
+
+    def show_change_profile_window(self):
+        change_profile_window = tk.Toplevel(self.root)
+        change_profile_window.title("Change Profile")
+
+        new_name_label = Label(change_profile_window, text="Enter new profile name:")
+        new_name_label.pack()
+
+        self.e = Entry(change_profile_window)
+        self.e.pack()
+
+        change_button = Button(change_profile_window, text="Change", command=self.change_profile)
+        change_button.pack()
+        
     # def on_enter(event):
     #     b.config(bg="#C4C4C4", fg="white")
 
@@ -219,7 +275,7 @@ class GUI:
                     self.friend_list_button[index].pack(anchor='n')
             
             except FileNotFoundError as e:
-                # logger.exception(e)
+                #logger.exception(e)
                 parent_dir = 'data/'
                 dir = self.name
                 path = join(parent_dir, dir)
@@ -242,16 +298,17 @@ class GUI:
                 #friend button
                 try:
                     self.friend_list_button[index] = Button(friends, text= friend, command=partial(self.show_chat, friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
-                    # self.friend_list_button[index].image = add_contact_photo
-                    # self.friend_list_button[index].pack(anchor='n')
+                    #self.friend_list_button[index].image = add_contact_photo
+                    #self.friend_list_button[index].pack(anchor='n')
                 except:
                     self.friend_list_button.append(Button(friends, text= friend, command=partial(self.show_chat, friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT))
-                self.friend_list_button[index].image = add_contact_photo
-                self.friend_list_button[index].pack(anchor='n')
+                    self.friend_list_button[index].image = add_contact_photo
+                    self.friend_list_button[index].pack(anchor='n')
                 
 
+    
 
-    def show_chat(self, name: str):
+     def show_chat(self, name: str):
         chat_history = None
         try:
             file = open('data/' + self.name + '/' + name + '.chat')
@@ -261,7 +318,7 @@ class GUI:
             for chat in chat_history:
                 self.chat_transcript_area.insert(INSERT, chat + '\n')
                 self.chat_transcript_area.yview(END)
-            pass
+
         except FileNotFoundError as e:
             logger.exception(str(e))
             path = 'data/' + self.name + '/' + name
@@ -282,7 +339,7 @@ class GUI:
         self.chat_transcript_area.pack(side='left', padx=10)
         scrollbar.pack(side='right', fill='y')
         frame.pack(side='top')
-        
+
 
     def display_chat_entry_box(self):
         frame = Frame()
