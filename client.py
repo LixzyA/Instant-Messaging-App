@@ -12,8 +12,11 @@ import logging
 
 
 def read_csv(name:str):
-    file = open(name, 'r').readline()
-    return file.split(',')
+    file = open(name, 'r').read()
+    if len(file) > 0:
+        return file.split('\n')
+    else:
+        return []
 
 class GUI:
     client_socket = None
@@ -100,7 +103,7 @@ class GUI:
         self.root.geometry('800x400')
         self.show_menu()
         self.show_friend(0)
-        if self.friend_list != None:
+        if self.friend_list not in [None, []]:
             self.display_chat_box(self.friend_list[0])
             self.display_chat_entry_box()
         else:
@@ -190,7 +193,7 @@ class GUI:
 
     def save_friend(self, name:str):
         file = open('data/'+ self.name +'/friends.data', 'a')
-        file.write(','+ name)
+        file.write(name + '\n')
         file.close()    
      
 
@@ -211,25 +214,25 @@ class GUI:
                 
                 for index, friend in enumerate(self.friend_list):
                     #friend button
-                    self.friend_list_button.append(Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT))
+                    self.friend_list_button.append(Button(friends, text= friend, command=partial(self.show_chat,friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT))
                     self.friend_list_button[index].image = add_contact_photo
                     self.friend_list_button[index].pack(anchor='n')
             
             except FileNotFoundError as e:
-                logger.exception(e)
+                # logger.exception(e)
                 parent_dir = 'data/'
                 dir = self.name
                 path = join(parent_dir, dir)
                 mkdir(path)
-                open(path +'/friends.data', 'x')
-                self.show_friend()
+                open(path +'/friends.data', 'w')
             
             except:
                 pass
                
         else: #refresh friend list
-            friends.pack_forget()
-            friends.pack(side='left', fill='both')
+            #harus refresh semua GUI nya
+            
+            
 
             self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
             for friend in self.friend_list_button:
@@ -238,22 +241,34 @@ class GUI:
             for index, friend in enumerate(self.friend_list):
                 #friend button
                 try:
-                    self.friend_list_button[index] = Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
-                    self.friend_list_button[index].image = add_contact_photo
-                    self.friend_list_button[index].pack(anchor='n')
+                    self.friend_list_button[index] = Button(friends, text= friend, command=partial(self.show_chat, friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
+                    # self.friend_list_button[index].image = add_contact_photo
+                    # self.friend_list_button[index].pack(anchor='n')
                 except:
-                    self.friend_list_button.append(Button(friends, text= friend, command=self.show_chat(friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT))
-                    self.friend_list_button[index].image = add_contact_photo
-                    self.friend_list_button[index].pack(anchor='n')
+                    self.friend_list_button.append(Button(friends, text= friend, command=partial(self.show_chat, friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT))
+                self.friend_list_button[index].image = add_contact_photo
+                self.friend_list_button[index].pack(anchor='n')
                 
 
-    def refresh_friend_list(self):
-        try:
-            pass
-        except Exception as e:
-            pass
 
     def show_chat(self, name: str):
+        chat_history = None
+        try:
+            file = open('data/' + self.name + '/' + name + '.chat')
+            chat_history= file.readlines()
+            file.close()
+            print(chat_history)
+            for chat in chat_history:
+                self.chat_transcript_area.insert(INSERT, chat + '\n')
+                self.chat_transcript_area.yview(END)
+            pass
+        except FileNotFoundError as e:
+            logger.exception(str(e))
+            path = 'data/' + self.name + '/' + name
+            open(path +'.chat', 'x')
+            self.show_chat(name)
+
+    def save_chat(self):
         pass
         
     def display_chat_box(self, name:str): 
@@ -267,12 +282,6 @@ class GUI:
         self.chat_transcript_area.pack(side='left', padx=10)
         scrollbar.pack(side='right', fill='y')
         frame.pack(side='top')
-
-        chat_history = None
-        try:
-            chat_history = open('data/Chat/' + name + '.data', 'r')
-        except:
-            pass
         
 
     def display_chat_entry_box(self):
@@ -297,8 +306,8 @@ class GUI:
             message = buffer.decode('utf-8')
          
             if "joined" in message:
-                user = message.split(":")[1]
-                message = user + " has joined"
+                # user = message.split(":")[1]
+                # message = user + " has joined"
                 self.chat_transcript_area.insert('end', message + '\n')
                 self.chat_transcript_area.yview(END)
             else:
@@ -342,7 +351,7 @@ class GUI:
             self.client_socket.close()
             exit(0)
     
-logger = logging.getLogger()
+logger = logging.getLogger() # for error logging
 #the mail function 
 if __name__ == '__main__':
     root = Tk()
