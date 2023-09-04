@@ -23,19 +23,46 @@ class DB:
             binaryData = file.read()
         return binaryData
 
-    def create_user(self, name: str, profile_pic:str):
-        mycursor = self.mydb.cursor()
-        sql = 'INSERT INTO user (name, profile_pic) values (%s, %s)'
-        
-        if profile_pic:
-            profile = self.convertToBinaryData(profile_pic)
-            val = (name, profile)
-        else:
-            val = (name, None)
+    def create_user(self, name: str, profile_pic: str):
+        try:
+            mycursor = self.mydb.cursor()
+            sql = 'INSERT INTO user (name, profile_pic) VALUES (%s, %s)'
             
-        mycursor.execute(sql, val)
-        self.mydb.commit()
+            if profile_pic:
+                profile = self.convertToBinaryData(profile_pic)
+                if profile is not None:
+                    val = (name, profile)
+                else:
+                    val = (name, None)
+            else:
+                val = (name, None)
+                
+            mycursor.execute(sql, val)
+            self.mydb.commit()
+            print(f"User '{name}' created successfully.")
+        except Error as e:
+            print(f"Error creating user: {e}")
+            self.mydb.rollback()
 
+    def change_username(self, old_name: str, new_name: str):
+        try:
+            mycursor = self.mydb.cursor()
+            check_sql = 'SELECT COUNT(*) FROM user WHERE name = %s'
+            mycursor.execute(check_sql, (new_name,))
+            count = mycursor.fetchone()[0]
+
+            if count > 0:
+                print(f"Username '{new_name}' is already in use.")
+                return
+
+            update_sql = 'UPDATE user SET name = %s WHERE name = %s'
+            val = (new_name, old_name)
+            mycursor.execute(update_sql, val)
+            self.mydb.commit()
+            print(f"Username changed from '{old_name}' to '{new_name}' successfully.")
+        except Error as e:
+            print(f"Error changing username: {e}")
+            self.mydb.rollback()
 
     def print_table(self, table_name: str):
         sql = 'SELECT * FROM '+ table_name
