@@ -308,7 +308,7 @@ class GUI:
 
     
 
-     def show_chat(self, name: str):
+    def show_chat(self, name: str):
         chat_history = None
         try:
             file = open('data/' + self.name + '/' + name + '.chat')
