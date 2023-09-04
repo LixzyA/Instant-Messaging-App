@@ -152,7 +152,7 @@ class GUI:
             Label(f, text='Add a friend now to start Chatting!').pack()
             f.pack(expand=True)
             
-     def show_menu(self):
+    def show_menu(self):
         menu = Frame(self.root)
         menu.pack(side='left', padx=10, pady=10, fill='y')
 
