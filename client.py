@@ -4,14 +4,13 @@ from tkinter import * #Tkinter Python Module for GUI
 from tkinter.ttk import * #Tkinter Python Module for GUI 
 from tkinter import messagebox
 import tkinter as tk
+from tkinter import filedialog 
 from functools import partial
 from PIL import Image, ImageTk
 from os import mkdir, stat, error
 from os.path import join
-from tkinter import filedialog 
 import logging
 import os
-
 
 def read_csv(name:str):
     file = open(name, 'r').read()
@@ -24,6 +23,7 @@ class GUI:
     client_socket = None
     last_received_message = None
     
+    
     def __init__(self, master):
         self.root = master
         self.chat_transcript_area = None
@@ -31,12 +31,14 @@ class GUI:
         self.enter_text_widget = None
         self.join_button = None
         self.chat_selected = None
-        self.friend_list = None
         self.friend_list_button = []
         self.login_form()
+        self.friend_list = []  # Initialize the friend_list as an empty list
+        self.add_contact_photo = None  # Initialize the add_contact_photo as None
+    
         
     def on_entry_click(self, event): # Function to Clear the background text when clicked
-        if self.e.get() == 'Enter your username':
+        if self.e.get() in ['Enter your username', 'Enter new username']:
             self.e.delete(0, tk.END)
             self.e.config(fg='black')
 
@@ -118,8 +120,10 @@ class GUI:
     def initialize_socket(self):
         try:
             self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # initialazing socket with TCP and IPv4
-            remote_ip = '127.0.0.1' # IP address 
-            remote_port = 10319 #TCP port
+            global_ip = '34.64.225.225' # IP address
+            remote_ip = '127.0.0.1' 
+            global_port = 3389 #TCP port
+            remote_port = 10319
             self.client_socket.connect((remote_ip, remote_port)) #connect to the remote server
             self.initialize_gui()
             self.listen_for_incoming_messages_in_a_thread()
@@ -147,11 +151,27 @@ class GUI:
             Label(f, text='Welcome to Barudak Chat!').pack()
             Label(f, text='Add a friend now to start Chatting!').pack()
             f.pack(expand=True)
-        
+            
     def show_menu(self):
-        #Add friend Button
         menu = Frame(self.root)
         menu.pack(side='left', padx=10, pady=10, fill='y')
+
+        #Profile Picture
+
+        self.profile_pic_path="data/"+self.name+"/profile.jpg"
+
+        if not os.path.exists(self.profile_pic_path):#checking for existing profile picture, if not found switch to defult photo
+           self.profile_pic_path="Resources/profile.png"
+
+        self.profile_image=Image.open(self.profile_pic_path)
+        self.profile_image=self.profile_image.resize((40,40))
+        self.profile_img = ImageTk.PhotoImage(self.profile_image)
+        self.profile_photo=Label(menu,image=self.profile_img)
+        self.profile_photo.pack()
+
+
+
+        #Add friend Button
         add_friend_image = Image.open('Resources/addfriend.png')  
         add_friend_image = add_friend_image.resize((40, 40))  
         add_friend_photo = ImageTk.PhotoImage(add_friend_image)
@@ -204,25 +224,106 @@ class GUI:
         exit_button.bind("<Enter>", on_button_hover) 
         exit_button.bind("<Leave>", on_button_leave) 
 
+        
+    def add_friend(self, menu):
+        self.add_friend_button['state'] = tk.DISABLED
+        self.e.pack(side=TOP)
+        self.b.pack(side=TOP)
+        self.e.focus_set()
+            
+    def change_profile_image(self):
+        file_path = filedialog.askopenfilename(title="Select an Image", filetypes=[("Image Files", "*.png *.jpg *.jpeg")])
+        
+        if file_path:
+            new_image = Image.open(file_path)
+            new_image = new_image.resize((40, 40))  # Resize to match the profile image size
+            self.profile_photo = ImageTk.PhotoImage(new_image)
+            profile_label = Label(self.root, image=self.profile_photo)
+            profile_label.pack()
+
+
     def open_settings(self):
+        def change_label_text():
+            settings_username.config(text=self.name,  font="oswald")
+            self.e.pack_forget()
+
+
+        def move_button_and_add_entry():
+            if self.flag==0:
+                # Hide the button
+                self.flag=1
+                change_username_button.pack_forget()
+                change_photo_button.pack_forget()
+                    
+                # Create a new entry widget and pack it below the button
+                self.e = tk.Entry(settings_window)
+                self.e.insert(0, 'Enter new username')
+                self.e.bind("<FocusIn>", self.on_entry_click)
+                self.e.pack(pady=5)
+                    
+                # Pack the button below the entry
+                change_username_button.pack(pady=5)
+                change_photo_button.pack(pady=5)
+            else:
+                self.e.pack_forget()
+                self.flag=0
+                if self.e.get() not in ["", "Enter new username"]:
+                    self.name=self.e.get()
+                    change_label_text()
+
+        def change_photo():
+             file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif *.bmp *.ppm *.pgm")])
+             if file_path:
+                image = Image.open(file_path)
+                image=image.resize((40,40))
+                self.profile_image=image
+                photo = ImageTk.PhotoImage(self.profile_image)
+                self.profile_photo.config(image=photo)
+                self.profile_photo.image=photo
+                image2=Image.open(file_path)
+                image2=image2.resize((80,80))
+                photo2 = ImageTk.PhotoImage(image2)
+                self.settings_profile_img=photo2
+                self.settings_profile_photo.config(image=self.settings_profile_img)
+                self.settings_profile_photo.image=self.settings_profile_img
+        
+
+        self.flag=0
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Settings")
 
-        change_profile_button = Button(settings_window, text="Change Profile", command=self.show_change_profile_window)
-        change_profile_button.pack()
+        self.settings_profile_image=self.profile_image.resize((80,80))
+        self.settings_profile_img = ImageTk.PhotoImage(self.settings_profile_image)
+        self.settings_profile_photo=Label(settings_window,image=self.settings_profile_img)
+        self.settings_profile_photo.pack(anchor="center")
 
+        settings_username=Label(settings_window, text=self.name, font="oswald")
+        settings_username.pack(pady=5)
+
+        change_username_button = Button(settings_window, text="Change Username", command=move_button_and_add_entry)
+        change_username_button.pack(pady=10)
+
+        change_photo_button = Button(settings_window, text="Change Profile Picture", command=change_photo)
+        change_photo_button.pack(pady=10)
+
+        #change_profile_button = Button(settings_window, text="Change Profile", command=self.show_change_profile_window)
+        #change_profile_button.pack(pady=10)
+
+
+    '''
     def show_change_profile_window(self):
         change_profile_window = tk.Toplevel(self.root)
-        change_profile_window.title("Change Profile")
+        change_profile_window.title("Change Username")
 
-        new_name_label = Label(change_profile_window, text="Enter new profile name:")
+        new_name_label = Label(change_profile_window, text="Enter new username:")
         new_name_label.pack()
-
+        
         self.e = Entry(change_profile_window)
         self.e.pack()
-
+        
         change_button = Button(change_profile_window, text="Change", command=self.change_profile)
         change_button.pack()
+    ''' 
         
     # def on_enter(event):
     #     b.config(bg="#C4C4C4", fg="white")
@@ -230,82 +331,112 @@ class GUI:
     # def on_leave(event):
     #     b.config(bg="white", fg="black")
 
-    def add_friend(self, menu):
-        self.add_friend_button['state'] = tk.DISABLED
-        self.e.pack(side=TOP)
-        self.b.pack(side=TOP)
-
-
     def submit(self):
         name = self.e.get()
-        if name not in [' ', '']:
+        if name.strip():  # Check if name is not empty or just spaces
             self.save_friend(name)
             self.e.delete(0, END)
             self.e.pack_forget()
             self.b.pack_forget()
             self.add_friend_button['state'] = tk.NORMAL
-            self.show_friend(refresh=1)
-            
 
+            # Add the new friend to the friend list without refreshing
+            self.friend_list.append(name)
+
+            # Create a new button for the new friend and add it to the GUI using pack
+            new_friend_button = Button(self.friends_frame, text=name, command=partial(self.show_chat, name),
+                                    padding=(20, 8, 20, 8), style="Custom.TButton", image=self.add_contact_photo,
+                                    compound=LEFT)
+            new_friend_button.image = self.add_contact_photo
+
+            # Place the new friend button at the top of the friend list
+            self.pack_before(new_friend_button, self.friend_list_button[0] if self.friend_list_button else None)
+            self.friend_list_button.insert(0, new_friend_button)  # Update the friend list button list
+    
     def save_friend(self, name:str):
         file = open('data/'+ self.name +'/friends.data', 'a')
         file.write(name + '\n')
-        file.close()    
-     
+        file.close()  
+        
+    def pack_before(self, widget, before_widget):
+        # Function to pack a widget before another widget
+        if before_widget is None:
+            widget.pack(side='top', anchor='n')
+        else:
+            widget.pack(in_=before_widget.master, before=before_widget)
+          
+        
+    def on_close_window(self):
+        if messagebox.askokcancel("Quit", "Do you want to quit?"):
+            self.root.destroy()
+            self.client_socket.close()
+            exit(0)
+            
+    def show_chat(self, friend_name):
+        pass
+    
 
-    def show_friend(self, refresh:int):
+    def show_friend(self, refresh: int):
+        #refresh the friends frame
+        if not hasattr(self, 'friends_frame'):
+            self.friends_frame = Frame(self.root)
+            self.friends_frame.pack(side='left', fill='both')
 
-        friends = Frame(self.root)
         style = Style()
-        style.configure("Custom.TButton", font=("Verdana"), anchor = 'w')
-        friends.pack(side='left', fill='both')
-        add_contact_image = Image.open("Resources\profile.png")  
-        add_contact_image = add_contact_image.resize((30, 30))  
-        add_contact_photo = ImageTk.PhotoImage(add_contact_image)
+        style.configure("Custom.TButton", font=("Verdana"), anchor='w')
+        add_contact_image = Image.open("Resources\profile.png")
+        add_contact_image = add_contact_image.resize((30, 30))
+        self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
+
+        # Clear existing friend buttons
+        for button in self.friends_frame.winfo_children():
+            button.destroy()
 
         if refresh == 0:
             try:
-                if stat('data/'+ self.name +'/friends.data').st_size != 0:
-                    self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
-                
-                for index, friend in enumerate(self.friend_list):
-                    #friend button
-                    self.friend_list_button.append(Button(friends, text= friend, command=partial(self.show_chat,friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT))
-                    self.friend_list_button[index].image = add_contact_photo
-                    self.friend_list_button[index].pack(anchor='n')
-            
+                if stat('data/' + self.name + '/friends.data').st_size != 0:
+                    self.friend_list = read_csv('data/' + str(self.name) + '/friends.data')
+
+                for friend in self.friend_list:
+                    self.create_friend_button(friend)
+
             except FileNotFoundError as e:
-                #logger.exception(e)
                 parent_dir = 'data/'
                 dir = self.name
                 path = join(parent_dir, dir)
                 mkdir(path)
-                open(path +'/friends.data', 'w')
-            
+                open(path + '/friends.data', 'w')
+
             except:
                 pass
-               
-        else: #refresh friend list
-            #harus refresh semua GUI nya
-            
-            
 
-            self.friend_list = read_csv('data/'+ str(self.name) +'/friends.data')
-            for friend in self.friend_list_button:
-                friend.pack_forget()
-
-            for index, friend in enumerate(self.friend_list):
-                #friend button
-                try:
-                    self.friend_list_button[index] = Button(friends, text= friend, command=partial(self.show_chat, friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT)
-                    #self.friend_list_button[index].image = add_contact_photo
-                    #self.friend_list_button[index].pack(anchor='n')
-                except:
-                    self.friend_list_button.append(Button(friends, text= friend, command=partial(self.show_chat, friend),padding=(20,8,20,8),style="Cusotm.TButton", image = add_contact_photo, compound=LEFT))
-                    self.friend_list_button[index].image = add_contact_photo
-                    self.friend_list_button[index].pack(anchor='n')
+        else:  # Refresh friend list based on updated data
+            self.friend_list = read_csv('data/' + str(self.name) + '/friends.data')
+            for friend in self.friend_list:
+                self.create_friend_button(friend)
                 
+    def display_chat_box(self, friend_name):      
+        pass
+                
+    def display_chat_entry_box(self):
+        frame = Frame()
+        Label(frame, text='Enter message:', font=("Serif", 12)).pack(side='top', anchor='w')
+        self.enter_text_widget = Text(frame, width=60, height=3, font=("Serif", 12))
+        self.enter_text_widget.pack(side='left', pady=15)
+        self.enter_text_widget.bind('<Return>', self.on_enter_key_pressed)
+        frame.pack(side='top')
+        
+    def listen_for_incoming_messages_in_a_thread(self):
+        thread = threading.Thread(target=self.receive_message_from_server, args=(self.client_socket,))
+        thread.start()
 
+    def create_friend_button(self, friend_name):
+        # Create a friend button based on the given name and add it to the friends_frame
+        friend_button = Button(self.friends_frame, text=friend_name, command=partial(self.show_chat, friend_name),
+                            padding=(20, 8, 20, 8), style="Custom.TButton", image=self.add_contact_photo,
+                            compound=LEFT)
+        friend_button.image = self.add_contact_photo
+        friend_button.pack(anchor='n')
     
 
     def show_chat(self, name: str):
@@ -338,15 +469,6 @@ class GUI:
         self.chat_transcript_area.bind('<KeyPress>', lambda e: 'break')
         self.chat_transcript_area.pack(side='left', padx=10)
         scrollbar.pack(side='right', fill='y')
-        frame.pack(side='top')
-
-
-    def display_chat_entry_box(self):
-        frame = Frame()
-        Label(frame, text='Enter message:', font=("Serif", 12)).pack(side='top', anchor='w')
-        self.enter_text_widget = Text(frame, width=60, height=3, font=("Serif", 12))
-        self.enter_text_widget.pack(side='left', pady=15)
-        self.enter_text_widget.bind('<Return>', self.on_enter_key_pressed)
         frame.pack(side='top')
         
         
