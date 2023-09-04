@@ -38,7 +38,7 @@ class GUI:
     
         
     def on_entry_click(self, event): # Function to Clear the background text when clicked
-        if self.e.get() == 'Enter your username':
+        if self.e.get() in ['Enter your username', 'Enter new username']:
             self.e.delete(0, tk.END)
             self.e.config(fg='black')
 
@@ -151,17 +151,26 @@ class GUI:
             Label(f, text='Welcome to Barudak Chat!').pack()
             Label(f, text='Add a friend now to start Chatting!').pack()
             f.pack(expand=True)
-        
-    def show_menu(self):
-        #Profile
+            
+     def show_menu(self):
         menu = Frame(self.root)
         menu.pack(side='left', padx=10, pady=10, fill='y')
-        default_profile_image = Image.open('Resources/default_profile.png')  
-        default_profile_image = default_profile_image.resize((40, 40))  
-        self.profile_photo = ImageTk.PhotoImage(default_profile_image)
-        profile_label = Label(menu, image=self.profile_photo)
-        profile_label.pack()
-        
+
+        #Profile Picture
+
+        self.profile_pic_path="data/"+self.name+"/profile.jpg"
+
+        if not os.path.exists(self.profile_pic_path):#checking for existing profile picture, if not found switch to defult photo
+           self.profile_pic_path="Resources/profile.png"
+
+        self.profile_image=Image.open(self.profile_pic_path)
+        self.profile_image=self.profile_image.resize((40,40))
+        self.profile_img = ImageTk.PhotoImage(self.profile_image)
+        self.profile_photo=Label(menu,image=self.profile_img)
+        self.profile_photo.pack()
+
+
+
         #Add friend Button
         add_friend_image = Image.open('Resources/addfriend.png')  
         add_friend_image = add_friend_image.resize((40, 40))  
@@ -175,7 +184,7 @@ class GUI:
 
         #Add Friend entry
         self.e = Entry(menu)
-        self.b = tk.Button(menu, text='add', command=self.submit)
+        self.b = tk.Button(menu, text='search', command=self.submit)
 
 
         # Setting Button
@@ -214,6 +223,7 @@ class GUI:
 
         exit_button.bind("<Enter>", on_button_hover) 
         exit_button.bind("<Leave>", on_button_leave) 
+
         
     def add_friend(self, menu):
         self.add_friend_button['state'] = tk.DISABLED
@@ -231,16 +241,76 @@ class GUI:
             profile_label = Label(self.root, image=self.profile_photo)
             profile_label.pack()
 
+
     def open_settings(self):
+        def change_label_text():
+            settings_username.config(text=self.name,  font="oswald")
+            self.e.pack_forget()
+
+
+        def move_button_and_add_entry():
+            if self.flag==0:
+                # Hide the button
+                self.flag=1
+                change_username_button.pack_forget()
+                change_photo_button.pack_forget()
+                    
+                # Create a new entry widget and pack it below the button
+                self.e = tk.Entry(settings_window)
+                self.e.insert(0, 'Enter new username')
+                self.e.bind("<FocusIn>", self.on_entry_click)
+                self.e.pack(pady=5)
+                    
+                # Pack the button below the entry
+                change_username_button.pack(pady=5)
+                change_photo_button.pack(pady=5)
+            else:
+                self.e.pack_forget()
+                self.flag=0
+                if self.e.get() not in ["", "Enter new username"]:
+                    self.name=self.e.get()
+                    change_label_text()
+
+        def change_photo():
+             file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif *.bmp *.ppm *.pgm")])
+             if file_path:
+                image = Image.open(file_path)
+                image=image.resize((40,40))
+                self.profile_image=image
+                photo = ImageTk.PhotoImage(self.profile_image)
+                self.profile_photo.config(image=photo)
+                self.profile_photo.image=photo
+                image2=Image.open(file_path)
+                image2=image2.resize((80,80))
+                photo2 = ImageTk.PhotoImage(image2)
+                self.settings_profile_img=photo2
+                self.settings_profile_photo.config(image=self.settings_profile_img)
+                self.settings_profile_photo.image=self.settings_profile_img
+        
+
+        self.flag=0
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Settings")
 
-        change_profile_button = Button(settings_window, text="Change Username", command=self.show_change_profile_window)
-        change_profile_button.pack()
-        
-        change_image_button = Button(settings_window, text="Change Profile Image", command=self.change_profile_image)
-        change_image_button.pack()
+        self.settings_profile_image=self.profile_image.resize((80,80))
+        self.settings_profile_img = ImageTk.PhotoImage(self.settings_profile_image)
+        self.settings_profile_photo=Label(settings_window,image=self.settings_profile_img)
+        self.settings_profile_photo.pack(anchor="center")
 
+        settings_username=Label(settings_window, text=self.name, font="oswald")
+        settings_username.pack(pady=5)
+
+        change_username_button = Button(settings_window, text="Change Username", command=move_button_and_add_entry)
+        change_username_button.pack(pady=10)
+
+        change_photo_button = Button(settings_window, text="Change Profile Picture", command=change_photo)
+        change_photo_button.pack(pady=10)
+
+        #change_profile_button = Button(settings_window, text="Change Profile", command=self.show_change_profile_window)
+        #change_profile_button.pack(pady=10)
+
+
+    '''
     def show_change_profile_window(self):
         change_profile_window = tk.Toplevel(self.root)
         change_profile_window.title("Change Username")
@@ -253,7 +323,7 @@ class GUI:
         
         change_button = Button(change_profile_window, text="Change", command=self.change_profile)
         change_button.pack()
-        os._exit()
+    ''' 
         
     # def on_enter(event):
     #     b.config(bg="#C4C4C4", fg="white")
