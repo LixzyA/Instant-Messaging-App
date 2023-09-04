@@ -72,16 +72,20 @@ class GUI:
         
 
     def login(self):
-        if self.e.get() not in ['Enter your username', '']:
-            self.name = self.e.get()
-            self.e.destroy()
-            self.b.destroy()
-            self.label.destroy()
-            self.logo_label.destroy()
-            self.frame.destroy()
-            self.initialize_socket()
+        username = self.e.get()
+        if username not in ['Enter your username', '']:
+            if len(username) <= 11:
+                self.name = username
+                self.e.destroy()
+                self.b.destroy()
+                self.label.destroy()
+                self.logo_label.destroy()
+                self.frame.destroy()
+                self.initialize_socket()
+            else:
+                messagebox.showerror("Error", "Username must be less than 12 characters")
         else:
-            Label(text='Username has to be unique!')
+            messagebox.showerror("Error", "Username cannot be empty")
 
     
     def change_profile(self):
@@ -184,7 +188,7 @@ class GUI:
 
         #Add Friend entry
         self.e = Entry(menu)
-        self.b = tk.Button(menu, text='search', command=self.submit)
+        self.b = tk.Button(menu, text='add', command=self.submit)
 
 
         # Setting Button
@@ -333,25 +337,29 @@ class GUI:
 
     def submit(self):
         name = self.e.get()
-        if name.strip():  # Check if name is not empty or just spaces
-            self.save_friend(name)
-            self.e.delete(0, END)
-            self.e.pack_forget()
-            self.b.pack_forget()
-            self.add_friend_button['state'] = tk.NORMAL
+        if name.strip():
+            if len(name) > 11:
+                messagebox.showerror("Error", "username does not exist")
+            else:
+                self.save_friend(name)
+                self.e.delete(0, END)
+                self.e.pack_forget()
+                self.b.pack_forget()
+                self.add_friend_button['state'] = tk.NORMAL
 
-            # Add the new friend to the friend list without refreshing
-            self.friend_list.append(name)
+                # Add the new friend to the friend list without refreshing
+                self.friend_list.append(name)
 
-            # Create a new button for the new friend and add it to the GUI using pack
-            new_friend_button = Button(self.friends_frame, text=name, command=partial(self.show_chat, name),
-                                    padding=(20, 8, 20, 8), style="Custom.TButton", image=self.add_contact_photo,
-                                    compound=LEFT)
-            new_friend_button.image = self.add_contact_photo
+                # Create a new friend button
+                truncated_name = name[:11] 
+                new_friend_button = Button(self.friends_frame, text=truncated_name, command=partial(self.show_chat, name),
+                                        padding=(20, 8, 20, 8), style="Custom.TButton", image=self.add_contact_photo,
+                                        compound=LEFT)
+                new_friend_button.image = self.add_contact_photo
 
-            # Place the new friend button at the top of the friend list
-            self.pack_before(new_friend_button, self.friend_list_button[0] if self.friend_list_button else None)
-            self.friend_list_button.insert(0, new_friend_button)  # Update the friend list button list
+                # Place the new friend button at the top of the friend list
+                self.pack_before(new_friend_button, self.friend_list_button[0] if self.friend_list_button else None)
+                self.friend_list_button.insert(0, new_friend_button) 
     
     def save_friend(self, name:str):
         file = open('data/'+ self.name +'/friends.data', 'a')
