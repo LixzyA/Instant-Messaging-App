@@ -4,26 +4,13 @@ from tkinter import * #Tkinter Python Module for GUI
 from tkinter.ttk import * #Tkinter Python Module for GUI 
 from tkinter import messagebox
 import tkinter as tk
+from tkinter import filedialog 
 from functools import partial
 from PIL import Image, ImageTk
 from os import mkdir, stat, error
 from os.path import join
-from tkinter import filedialog 
 import logging
 import os
-#import mysql.connector
-
-#Create the connection object   
-#myconn = mysql.connector.connect(host = "sql12.freesqldatabase.com", user = "sql12643810",passwd = "9K6hCbWQfH", database = "sql12643810") 
-
-
-#printing the connection object   
-#print(myconn)
-#creating the cursor object  
-# cur = myconn.cursor()
-# print(cur) 
-
-
 
 def read_csv(name:str):
     file = open(name, 'r').read()
@@ -44,11 +31,8 @@ class GUI:
         self.enter_text_widget = None
         self.join_button = None
         self.chat_selected = None
-        self.friend_list = None
         self.friend_list_button = []
         self.login_form()
-        self.root = master
-        self.root = master
         self.friend_list = []  # Initialize the friend_list as an empty list
         self.add_contact_photo = None  # Initialize the add_contact_photo as None
     
@@ -136,8 +120,10 @@ class GUI:
     def initialize_socket(self):
         try:
             self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # initialazing socket with TCP and IPv4
-            remote_ip = '34.64.225.225' # IP address 
-            remote_port = 3389 #TCP port
+            global_ip = '34.64.225.225' # IP address
+            remote_ip = '127.0.0.1' 
+            global_port = 3389 #TCP port
+            remote_port = 10319
             self.client_socket.connect((remote_ip, remote_port)) #connect to the remote server
             self.initialize_gui()
             self.listen_for_incoming_messages_in_a_thread()
