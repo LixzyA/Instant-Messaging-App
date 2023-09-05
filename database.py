@@ -40,7 +40,7 @@ class DB:
             mycursor.execute(sql, val)
             self.mydb.commit()
             print(f"User '{name}' created successfully.")
-        except Error as e:
+        except Exception as e:
             print(f"Error creating user: {e}")
             self.mydb.rollback()
 
@@ -60,7 +60,7 @@ class DB:
             mycursor.execute(update_sql, val)
             self.mydb.commit()
             print(f"Username changed from '{old_name}' to '{new_name}' successfully.")
-        except Error as e:
+        except Exception as e:
             print(f"Error changing username: {e}")
             self.mydb.rollback()
 
