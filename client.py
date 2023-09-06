@@ -150,7 +150,7 @@ class GUI:
                 message = buffer.decode('utf-8')
                 if message:
                     wait = False
-
+            print(message)
             if message.lower() != 'success':
                 Label(text='Username doesn\'t exist. Please signup first').pack()
                 Button(text='Quit', command=self.quit).pack()
