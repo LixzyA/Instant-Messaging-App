@@ -141,6 +141,18 @@ class DB:
             return 'User doesn\'t exist'
         else:
             return 'Chat doesn\'t exist'
+        
+    def check_username_if_exists(self, username_str):
+        sql = 'SELECT name FROM user'
+        mycursor = self.mydb.cursor()
+        mycursor.execute(sql)
+        self.mydb.commit()
+
+        myresult = mycursor.fetchall()
+        if username_str in myresult:
+            return True
+        else:
+            return False
 
     def show_message(self, chat_room_id: int):
         mycursor = self.mydb.cursor()
