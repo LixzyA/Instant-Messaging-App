@@ -24,11 +24,12 @@ class DB:
 
         found = False
         try:
+            #checks if name is already used
             for tuple in myresult:
                 if name in tuple:
                     found = True
+
             if not found:
-                #need to check if name already exists
                 sql = 'INSERT INTO user (name, profile_pic) values (%s, %s)'
                 
                 if profile_pic:
