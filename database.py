@@ -5,9 +5,9 @@ class DB:
     def __init__(self) -> None:
         self.mydb = mysql.connector.connect(
             host="sql12.freesqldatabase.com",
-            user="sql12643810",
-            password="9K6hCbWQfH",
-            database='sql12643810'
+            user="sql12645143",
+            password="9VXqHFyIbA",
+            database='sql12645143'
         )
 
     def convertToBinaryData(self, filename):
@@ -56,16 +56,16 @@ class DB:
 
             if count > 0:
                 print(f"Username '{new_name}' is already in use.")
-                return
+                return 'Username Already Exists'
 
             update_sql = 'UPDATE user SET name = %s WHERE name = %s'
             val = (new_name, old_name)
             mycursor.execute(update_sql, val)
             self.mydb.commit()
             print(f"Username changed from '{old_name}' to '{new_name}' successfully.")
+            return 'Success Changing Username'
         except Exception as e:
-            print(f"Error changing username: {e}")
-            self.mydb.rollback()
+            return 'Error Changing Username'
     
     def change_profile(self, name: str, new_profile:str):
         mycursor = self.mydb.cursor()
@@ -146,13 +146,14 @@ class DB:
         sql = 'SELECT name FROM user'
         mycursor = self.mydb.cursor()
         mycursor.execute(sql)
-        self.mydb.commit()
 
         myresult = mycursor.fetchall()
-        if username_str in myresult:
-            return True
-        else:
-            return False
+        found = False
+        for tuple in myresult:
+            if username_str in tuple:
+                found = True
+        return found
+            
 
     def show_message(self, chat_room_id: int):
         mycursor = self.mydb.cursor()
@@ -196,6 +197,8 @@ class DB:
 
 if __name__ == '__main__':
     mydb = DB()
+    # result = mydb.change_username('lix', 'liix')
+    # print(result)
     # mydb.create_user('lix', 'Resources/profile.png')
     # mydb.print_table('user')
 
