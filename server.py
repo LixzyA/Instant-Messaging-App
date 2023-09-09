@@ -44,12 +44,14 @@ class ChatServer:
                     result = self.mydb.create_user(incoming_buffer.decode('utf-8').split()[2], None)
                     so.send(result.encode('utf-8'))
                 elif 'LOGIN ' in incoming_buffer.decode('utf-8'):
-                    
                     result = self.mydb.check_username_if_exists(incoming_buffer.decode('utf-8').split()[1])
                     if not result:
                         so.send('Username doesn\'t exist'.encode('utf-8'))
                     else:
                         so.send('Success'.encode('utf-8'))
+                elif 'CHANGE USERNAME' in incoming_buffer.decode('utf-8'):
+                    result = self.mydb.change_username(incoming_buffer.decode('utf-8').split()[2], incoming_buffer.decode('utf-8').split()[3])
+                    so.send(result.encode('utf-8'))
                 else:
                     #send message to certain clients
                     self.last_received_message = incoming_buffer.decode('utf-8')
