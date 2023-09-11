@@ -18,6 +18,7 @@ from customtkinter import CTk
 CREATE_USER = 'CREATE USER '
 LOGIN = 'LOGIN '
 CHANGE_USERNAME = 'CHANGE USERNAME '
+INIT_FRIEND = 'INIT FRIEND'
 
 def read_csv(name:str):
     file = open(name, 'r').read()
@@ -51,13 +52,10 @@ class GUI:
         self.name = None
         self.enter_text_widget = None
         self.join_button = None
-        self.chat_selected = None
-        self.friend_list = None
-        self.friend_list_button = []
         self.add_contact_photo = None  # Initialize the add_contact_photo as None
         ctk.set_appearance_mode('light')
         state = self.initialize_socket()
-        print(state)
+        self.listen_for_incoming_messages_in_a_thread()
         if state.lower() == 'success':
             self.login_form()
         
@@ -114,24 +112,23 @@ class GUI:
                 print(create_user_command)
                 self.client_socket.send(create_user_command.encode('utf-8'))
                 
-                wait = True
-                message = None
-                while wait:
-                    buffer = self.client_socket.recv(256)
-                    message = buffer.decode('utf-8')
-                    print(message)
-                    if message:
-                        wait = False
+                # wait = True
+                # message = None
+                # while wait:
+                #     buffer = self.client_socket.recv(256)
+                #     message = buffer.decode('utf-8')
+                #     print(message)
+                #     if message:
+                #         wait = False
 
-                if message.lower() == 'error':
-                    Label(text='Error creating a new account').pack()
-                    Button(text='Quit', command=self.quit).pack()
-                elif message.lower() == 'username already exists':
-                    Label(text='Username already exists. Use a unique user').pack()
-                    Button(text='Quit', command=self.quit).pack()
-                else:
-                    self.initialize_gui()
-                    self.listen_for_incoming_messages_in_a_thread()
+                # if message.lower() == 'error':
+                #     Label(text='Error creating a new account').pack()
+                #     Button(text='Quit', command=self.quit).pack()
+                # elif message.lower() == 'username already exists':
+                #     Label(text='Username already exists. Use a unique user').pack()
+                #     Button(text='Quit', command=self.quit).pack()
+                # else:
+                #     self.initialize_gui()
             else:
                 Label(text='Username has to be unique!') 
 
@@ -159,23 +156,8 @@ class GUI:
             self.logo_label.destroy()
             self.frame.destroy()
             login_user_command = LOGIN + self.name
-            print(login_user_command)
             self.client_socket.send(login_user_command.encode('utf-8'))
 
-            wait = True
-            message = None
-            while wait:
-                buffer = self.client_socket.recv(256)
-                message = buffer.decode('utf-8')
-                if message:
-                    wait = False
-            print(message)
-            if message.lower() != 'success':
-                Label(text='Username doesn\'t exist. Please signup first').pack()
-                Button(text='Quit', command=self.quit).pack()
-            else:
-                self.initialize_gui()
-                self.listen_for_incoming_messages_in_a_thread()
         else:
             Label(text='Username has to be unique!')
 
@@ -235,16 +217,22 @@ class GUI:
             return 'failed'
 
 
-            
-
     def quit(self):
-        # self.ro
-        # ot.destroy()
         self.root.destroy()
         self.client_socket.close()
         exit(0)
 
     def initialize_gui(self): # GUI initializer
+        
+        self.chat_selected = None
+        self.friend_list = None
+        self.friend_list_button = []
+
+        init_friend_command = INIT_FRIEND + self.name
+        self.client_socket.sendall(init_friend_command)
+
+        
+
         self.root.geometry('800x400')
         self.show_menu()
         self.show_friend(0)
@@ -252,9 +240,9 @@ class GUI:
             self.display_chat_box(self.friend_list[0])
             self.display_chat_entry_box()
         else:
-            f = Frame()
-            Label(f, text='Welcome to Barudak Chat!').pack()
-            Label(f, text='Add a friend now to start Chatting!').pack()
+            f = ctk.CTkFrame(self.root, fg_color= 'transparent', bg_color= 'transparent')
+            ctk.CTkLabel(f, text='Welcome to Barudak Chat!', fg_color= 'transparent', bg_color= 'transparent').pack()
+            ctk.CTkLabel(f, text='Add a friend now to start Chatting!', fg_color= 'transparent', bg_color= 'transparent').pack()
             f.pack(expand=True)
         
     def show_menu(self):
@@ -289,8 +277,8 @@ class GUI:
         self.add_group_button.pack(anchor='w')
 
         #Add Friend entry
-        self.e = ctk.CTkEntry(menu)
-        self.b = ctk.CTkButton(menu, text='add', command=self.submit)
+        self.add_friend_entry = ctk.CTkEntry(menu)
+        self.add_friend_button2 = ctk.CTkButton(menu, text='add', command=self.submit)
 
 
         # Setting Button
@@ -324,17 +312,18 @@ class GUI:
         self.exit_button.bind("<Leave>", on_button_leave) 
 
     def add_friend(self, menu):
-        print("addfriend")
         self.add_friend_button.configure(state ='disabled')
         self.add_friend_button.pack_forget()
         self.setting_button.pack_forget()
         self.exit_button.pack_forget()
+        self.add_group_button.pack_forget()
 
         self.add_friend_button.pack()
+        self.add_group_button.pack()
         self.setting_button.pack()
-        self.e.pack(side=TOP)
-        self.b.pack(side=TOP)
-        self.e.focus_set()
+        self.add_friend_entry.pack(side=TOP)
+        self.add_friend_button2.pack(side=TOP)
+        self.add_friend_entry.focus_set()
         self.exit_button.pack(side='bottom')
         
     def open_settings(self):
@@ -394,7 +383,7 @@ class GUI:
         self.settings_profile_photo=ctk.CTkLabel(settings_window,image=self.settings_profile_img)
         self.settings_profile_photo.pack(anchor="center")
 
-        settings_username=ctk.CTkLabel(settings_window, text=self.name, font="oswald")
+        settings_username=ctk.CTkLabel(settings_window, text=self.name)
         settings_username.pack(pady=5)
 
         change_username_button = ctk.CTkButton(settings_window, text="Change Username", command=move_button_and_add_entry)
@@ -419,19 +408,6 @@ class GUI:
         
         change_button = ctk.CTkButton(change_profile_window, text="Change",text_color="#3d3938", command=self.change_profile, fg_color='transparent')
         change_button.pack()
-        
-    # def on_enter(event):
-    #     b.config(bg="#C4C4C4", fg="white")
-
-    # def on_leave(event):
-    #     b.config(bg="white", fg="black")
-
-    def add_friend(self, menu):
-        self.add_friend_button['state'] = tk.DISABLED
-        self.e.pack(side=TOP)
-        self.b.pack(side=TOP)
-        self.e.focus_set()
-
 
     def submit(self):
         name = self.e.get()
@@ -440,24 +416,24 @@ class GUI:
                 messagebox.showerror("Error", "username does not exist")
             else:
                 self.save_friend(name)
-                self.e.delete(0, END)
-                self.e.pack_forget()
-                self.b.pack_forget()
-                self.add_friend_button['state'] = tk.NORMAL
+                self.add_friend_entry.delete(0, END)
+                self.add_friend_entry.pack_forget()
+                self.add_friend_button2.pack_forget()
+                self.add_friend_button.configure(state='normal')
 
                 # Add the new friend to the friend list without refreshing
                 self.friend_list.append(name)
 
                 # Create a new friend button
                 truncated_name = name[:11] 
-                new_friend_button = Button(self.friends_frame, text=truncated_name, command=partial(self.show_chat, name),
-                                        padding=(20, 8, 20, 8), style="Custom.TButton", image=self.add_contact_photo,
-                                        compound=LEFT)
-                new_friend_button.image = self.add_contact_photo
+                # new_friend_button = Button( text=truncated_name, command=partial(self.show_chat, name),
+                #                         padding=(20, 8, 20, 8), style="Custom.TButton", image=self.add_contact_photo,
+                #                         compound=LEFT)
+                # new_friend_button.image = self.add_contact_photo
 
-                # Place the new friend button at the top of the friend list
-                self.pack_before(new_friend_button, self.friend_list_button[0] if self.friend_list_button else None)
-                self.friend_list_button.insert(0, new_friend_button) 
+                # # Place the new friend button at the top of the friend list
+                # self.pack_before(new_friend_button, self.friend_list_button[0] if self.friend_list_button else None)
+                # self.friend_list_button.insert(0, new_friend_button) 
 
     def save_friend(self, name:str):
         file = open('data/'+ self.name +'/friends.data', 'a')
@@ -497,9 +473,8 @@ class GUI:
             try:
                 print("felix kontol")
 
-                self.scrollable_frame = ScrollableFrame(self.root, self.friend_list, height = 400, width =150 )
+                self.scrollable_frame = ScrollableFrame(self.root, self.friend_list, height = 400, width =150)
                 self.scrollable_frame.pack(side = 'left')
-                #if stat('data/' + self.name + '/friends.data').st_size != 0:
                 self.friend_list = read_csv('data/' + str(self.name) + '/friends.data')
                 print(self.friend_list[0])
                 for friend in self.friend_list:
@@ -590,6 +565,8 @@ class GUI:
                 # message = user + " has joined"
                 self.chat_transcript_area.insert('end', message + '\n')
                 self.chat_transcript_area.yview(END)
+            elif 'LOGIN' in message:
+                self.initialize_gui()
             else:
                 self.chat_transcript_area.insert('end', message + '\n')
                 self.chat_transcript_area.yview(END)
