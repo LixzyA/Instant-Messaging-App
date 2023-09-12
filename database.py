@@ -1,201 +1,155 @@
-import pymysql
-import sqlalchemy
-import sqlalchemy.orm
-from sqlalchemy import Column, Integer, String, BLOB, TEXT
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column
-from google.cloud.sql.connector import Connector, IPTypes
-from google.oauth2 import service_account
-
-
-def connect_with_connector() -> sqlalchemy.engine.base.Engine:
-    """
-    Initializes a connection pool for a Cloud SQL instance of MySQL.
-
-    Uses the Cloud SQL Python Connector package.
-    """
-    # Note: Saving credentials in environment variables is convenient, but not
-    # secure - consider a more secure solution such as
-    # Cloud Secret Manager (https://cloud.google.com/secret-manager) to help
-    # keep secrets safe.
-
-    instance_connection_name = 'barudak-chat:asia-northeast2:barudak'
-    db_user = 'root'
-    db_pass = 'barudak123'
-    db_name = 'barudak'
-    
-    ip_type = IPTypes.PUBLIC
-
-    connector = Connector(ip_type)
-
-    def getconn() -> pymysql.connections.Connection:
-        conn: pymysql.connections.Connection = connector.connect(
-            instance_connection_name,
-            "pymysql",
-            user=db_user,
-            password=db_pass,
-            db=db_name,
-        )
-        return conn
-
-    pool = sqlalchemy.create_engine(
-        "mysql+pymysql://",
-        creator=getconn,
-        # [START_EXCLUDE]
-        # Pool size is the maximum number of permanent connections to keep.
-        pool_size=5,
-        # Temporarily exceeds the set pool_size if no connections are available.
-        max_overflow=2,
-        # The total number of concurrent connections for your application will be
-        # a total of pool_size and max_overflow.
-        # 'pool_timeout' is the maximum number of seconds to wait when retrieving a
-        # new connection from the pool. After the specified amount of time, an
-        # exception will be thrown.
-        pool_timeout=30,  # 30 seconds
-        # 'pool_recycle' is the maximum number of seconds a connection can persist.
-        # Connections that live longer than the specified amount of time will be
-        # re-established
-        pool_recycle=1800,  # 30 minutes
-        # [END_EXCLUDE]
-    )
-    return pool
-
-class Base(sqlalchemy.orm.DeclarativeBase):
-    pass
-
-class user(Base):
-    __tablename__ = 'user'
-    user_id :Mapped[int]= mapped_column(Integer, autoincrement=True, nullable= False,primary_key= True)
-    name: Mapped[str] = mapped_column(String)
-    profile_pic: Mapped[BLOB] = mapped_column(BLOB)
-
-class chatroom(Base):
-    __tablename__= 'chatroom'
-    room_id : Mapped[int] = mapped_column(Integer, autoincrement=True, nullable= False, primary_key=True)
-    room_type :Mapped[int] = mapped_column(Integer)
-    creator_id :Mapped[int] = mapped_column(sqlalchemy.ForeignKey(user.user_id))
-
-class friends(Base):
-    __tablename__ = 'friends'
-    friend_id : Mapped[int] = mapped_column(sqlalchemy.ForeignKey(user.user_id), primary_key=True)
-    user_id : Mapped[int] = mapped_column(sqlalchemy.ForeignKey(user.user_id), primary_key=True)
-
-class messages(Base):
-    __tablename__ = 'messages'
-    message : Mapped[TEXT] = mapped_column(TEXT)
-    message_id : Mapped[int] = mapped_column(Integer, nullable=False, primary_key=True, autoincrement=True)
-    room_id : Mapped[int] = mapped_column(sqlalchemy.ForeignKey(chatroom.room_id))
-    user_id : Mapped[int] = mapped_column(sqlalchemy.ForeignKey(user.user_id))
-    
-class participants(Base):
-    __tablename__ = 'participants'
-    room_id : Mapped[int] = mapped_column(sqlalchemy.ForeignKey(chatroom.room_id), primary_key=True)
-    user_id : Mapped[int] = mapped_column(sqlalchemy.ForeignKey(user.user_id), primary_key=True)
+import mysql.connector
 
 class DB:
 
     def __init__(self) -> None:
-        self.mydb = connect_with_connector()
-        try:
-            self.connection = self.mydb.connect()
-            print('success connecting')
-        except:
-            print('failed to connect')
+        self.mydb = mysql.connector.connect(
+            host ='barudak.covg8lehzfxt.ap-northeast-2.rds.amazonaws.com',
+            user ='admin',
+            password = 'admin123',
+            database = 'barudak'
+        )
 
-    def create_user(self, name: str, profile_pic:str) -> str:
-        result = self.check_username_if_exists(name)
-        profile = open(profile_pic, 'rb').read()
-        # new username doesn't exist, can make new account
-        if not result:
-            stmt = sqlalchemy.insert(user).values(name =name, profile_pic =profile)
-            res = self.connection.execute(stmt)
-            self.connection.commit()
-            return 'Success creating account'
-        # else username already exist
+    def convertToBinaryData(self, filename):
+    # Convert digital data to binary format
+        with open(filename, 'rb') as file:
+            binaryData = file.read()
+        return binaryData
+
+    def create_user(self, name: str, profile_pic:str):
+        found = self.check_username_if_exists(name)
+        try:
+            if not found:
+                #need to check if name already exists
+                sql = 'INSERT INTO user (name, profile_pic) values (%s, %s)'
+                
+                if profile_pic not in [None, ' ', '']:
+                    profile = self.convertToBinaryData(profile_pic)
+                    val = (name, profile)
+                else:
+                    val = (name, None)
+                
+                mycursor = self.mydb.cursor()
+                mycursor.execute(sql, val)
+                self.mydb.commit()
+                return True
+            else:
+                return False
+        except Exception as e:
+            print(str(e))
+            return False
+        
+    def check_username_if_exists(self, username_str):
+        mycursor = self.mydb.cursor()
+        sql = 'SELECT name FROM user where name = %s'
+        val = (username_str,)
+        mycursor.execute(sql, val)
+
+        myresult = mycursor.fetchone()
+        if myresult is not None:
+            for row in myresult:
+                if username_str in row:
+                    return True
+                else:
+                    return False
         else:
-            return 'Username already exist'
-        
-    def get_id_name_from_user(self, name:str):
-        session = sqlalchemy.orm.Session(self.mydb)
-        result = session.query(user).where(user.name.in_([name])).first()
-        return result
-        
-        #False = username doesn't exist
-        #True  = username exist
-    def check_username_if_exists(self, username_str) -> bool:
-        session = sqlalchemy.orm.Session(self.mydb)
-        result = session.query(user).where(user.name.in_([username_str])).first() is not None
-        return result
+            return False
 
     def change_username(self, old_name: str, new_name: str):
-        exist = self.check_username_if_exists(new_name)
-        
-        if not exist:
-            id = self.get_id_name_from_user(old_name).user_id
-            stmt = sqlalchemy.update(user).where(user.user_id == id).values(name = new_name)
-            self.connection.execute(stmt)
-            self.connection.commit()
-            return 'Success'
+        #check if new_name is already used
+        found = self.check_username_if_exists(new_name)
+
+        if not found:
+            mycursor = self.mydb.cursor()
+            sql = 'UPDATE user SET name = %s WHERE name = %s'
+            val = (new_name, old_name)
+            mycursor.execute(sql, val)
+            self.mydb.commit()
+            return 'Success changing username'
         else:
-            return 'Username already exist'
-
-    def change_profile(self, name: str, new_profile:str):
-        exist = self.check_username_if_exists(name)
-
-        profile = open(new_profile, 'rb').read()
-        if exist:
-            id = self.get_id_name_from_user(name).user_id
-            stmt = sqlalchemy.update(user).where(user.user_id == id).values(profile_pic = profile)
-            self.connection.execute(stmt)
-            self.connection.commit()
-            return 'Success'
-        else:
-            return 'Account doesn\'t exists'
-
-
-    def create_chatroom(self, chatroom_name: str, room_type: int, creator_id: int):
-        stmt = sqlalchemy.insert(chatroom).values(chatroom_name = chatroom_name, room_type = room_type, creator_id = creator_id)
-        self.connection.execute(stmt)
-        self.connection.commit()
-        return 'success'
+            return 'username already exist'
     
-    def list_friend(self, name:str) -> list:
-        session = sqlalchemy.orm.Session(self.mydb)
-        result = session.query(user).where(user.name.in_([name])).first()
-        user_id = result.user_id
-
-        result = session.query(friends).where(friends.user_id.in_([user_id])).all()
-        return result
-
-    def add_friend(self, user_name: str, friend_name: str):
-        session = sqlalchemy.orm.Session(self.mydb)
-        result = session.query(user).where(user.name.in_([user_name])).first()
-        user_id = result.user_id
-        
-        result = session.query(user).where(user.name.in_([friend_name])).first()
-        if result is not None:
-            friend_id = result.user_id
-        else:
-            return 'Friend doesn\'t exist'
-
-        try:
-            stmt1 = sqlalchemy.insert(friends).values(user_id = user_id, friend_id =  friend_id)
-            stmt2 = sqlalchemy.insert(friends).values(user_id = friend_id, friend_id =  user_id)
-            self.connection.execute(stmt1)
-            self.connection.execute(stmt2)
-            self.connection.commit()
-            return 'Success adding friend'
-        except:
-            return 'Error adding friend'
-
-
-        
-    def get_room_name(self):
+    def change_profile(self, name: str, new_profile:str):
         mycursor = self.mydb.cursor()
-        sql = 'SELECT room_id, room_name FROM chatroom'
-        mycursor.execute(sql)
-        my_result = mycursor.fetchall()
-        return my_result
+        profile = self.convertToBinaryData(new_profile)
+        sql = 'UPDATE USER SET profile_pic = %s WHERE name = %s'
+        val = (profile, name)
+
+        mycursor.execute(sql, val)
+        self.mydb.commit()
+
+    def add_friend(self, user_name:str, friend_name:str):
+        #check user_id and friend_id
+        sql = 'SELECT name, user_id FROM user WHERE name = %s'
+        val =(user_name,)
+        mycursor = self.mydb.cursor()
+        mycursor.execute(sql, val)
+
+        for (name, id) in mycursor:
+            user_id = id
+
+        val =(friend_name,)
+        mycursor.execute(sql, val)
+
+        for (name, users_id) in mycursor:
+            friend_id = users_id
+
+        if friend_id not in ['', None]:
+            # check if they are already added
+            sql = 'SELECT COUNT(*) from friends where user_id = %s AND friend_id = %s'
+            val = (user_id, friend_id)
+            mycursor.execute(sql,val)
+            result = mycursor.fetchone()
+
+            if result[0] < 1:
+                sql = 'INSERT IGNORE INTO friends(user_id, friend_id) values (%s, %s)'
+                val = (user_id, friend_id)
+                mycursor.execute(sql,val)
+                val = (friend_id, user_id)
+                mycursor.execute(sql,val)
+                self.mydb.commit()
+
+            return 'Success adding friend'
+        
+        else:
+            return 'Friend doesn\t exist' 
+
+    def list_friend(self, name:str):
+        sql = 'SELECT name, user_id FROM user WHERE name = %s'
+        val = (name,)
+        cursor = self.mydb.cursor()
+        cursor.execute(sql,val)
+
+        for (name, id) in cursor:
+            user_id = id
+        
+        sql = '''SELECT user.name, friends.friend_id from friends INNER JOIN user ON 
+        friends.friend_id = user.user_id WHERE friends.user_id = %s
+        '''
+        val = (user_id, )
+        cursor.execute(sql,val)
+
+        ls = []
+        for (name, id) in cursor:
+            ls.append(name)
+        
+        return ls
+
+    def create_chatroom(self, chatroom_name: str, room_type: int, participants: list):
+        #check if chatroom already exist
+        sql = 'SELECT * FROM chatroom WHERE '
+
+        mycursor = self.mydb.cursor()
+        sql = 'INSERT INTO chatroom (room_name, room_type) values (%s, %s)'
+        val = (chatroom_name, room_type)
+        mycursor.execute(sql, val)
+        self.mydb.commit()
+
+    def get_room_list(self, name:str):
+        cursor = self.mydb.cursor()
+        sql = 'SELECT room_id FROM user where name = %s JOIN participants ON user.user_id = participants.user_id'
+        cursor.execute(sql, (name, ))
+        pass
 
     def send_message(self, message: str, room_name: str, user_name: str):
         mycursor = self.mydb.cursor()
@@ -258,13 +212,27 @@ class DB:
             print(x)
 
 
+    def print_table(self, table_name: str):
+        sql = 'SELECT * FROM '+ table_name
+        mycursor = self.mydb.cursor()
+        mycursor.execute(sql)
+
+        myresult = mycursor.fetchall()
+        for x in myresult:
+            print(x) 
+
+
 
 if __name__ == '__main__':
     mydb = DB()
-    # mydb.add_friend('lixzy', 'Felix')
-    # mydb.create_user('', '')
-    # res = mydb.change_username('lix', 'lixzy')
-
+    # mydb.create_user('lix', 'Resources/profile.png')
+    res = mydb.create_user('Juan', '')
+    print('create user', res)
+    res = mydb.add_friend('Felix', 'Juan')
+    
+    # print('adding friend', res)
+    ls = mydb.list_friend('Felix')
+    print(ls)
 '''
 chatroom = (room_id auto_increment, room_type, creator_id)
 user = (user_id, name, profile_pic)

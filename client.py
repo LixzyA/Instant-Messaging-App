@@ -55,7 +55,6 @@ class GUI:
         self.add_contact_photo = None  # Initialize the add_contact_photo as None
         ctk.set_appearance_mode('light')
         state = self.initialize_socket()
-        self.listen_for_incoming_messages_in_a_thread()
         if state.lower() == 'success':
             self.login_form()
         
@@ -90,7 +89,6 @@ class GUI:
 
 
     def signup(self):
-   
         button_font = ("Times New Roman", 20)
         self.login_button.destroy()
         self.signup_button.destroy()
@@ -109,32 +107,23 @@ class GUI:
                 self.logo_label.destroy()
                 self.frame.destroy()
                 create_user_command = CREATE_USER + self.name
-                print(create_user_command)
                 self.client_socket.send(create_user_command.encode('utf-8'))
-                
-                # wait = True
-                # message = None
-                # while wait:
-                #     buffer = self.client_socket.recv(256)
-                #     message = buffer.decode('utf-8')
-                #     print(message)
-                #     if message:
-                #         wait = False
 
-                # if message.lower() == 'error':
-                #     Label(text='Error creating a new account').pack()
-                #     Button(text='Quit', command=self.quit).pack()
-                # elif message.lower() == 'username already exists':
-                #     Label(text='Username already exists. Use a unique user').pack()
-                #     Button(text='Quit', command=self.quit).pack()
-                # else:
-                #     self.initialize_gui()
+                wait = True
+                while wait:
+                    buffer = self.client_socket.recv(256)
+                    message = buffer.decode('utf-8')
+                    if message:
+                        wait = False
+
+                if 'SIGNUP SUCCESS' in message.upper():
+                    self.initialize_gui()
+                else:
+                    messagebox.showerror(title='Error',message='Something went wrong\nRestart the app')
+                    self.quit()
+        
             else:
-                Label(text='Username has to be unique!') 
-
-
-
-
+                ctk.CTkLabel(text='Username has to be unique!') 
 
     def login(self):
         button_font = ("Times New Roman", 20)
@@ -158,8 +147,20 @@ class GUI:
             login_user_command = LOGIN + self.name
             self.client_socket.send(login_user_command.encode('utf-8'))
 
+            wait = True
+            while wait:
+                buffer = self.client_socket.recv(256)
+                message = buffer.decode('utf-8')
+                if message is not None:
+                    wait = False
+            if 'LOGIN SUCCESS' in message.upper():
+                self.initialize_gui()
+            else:
+                messagebox.showerror(title='Error',message='Something went wrong\nRestart the app')
+                self.quit()
+
         else:
-            Label(text='Username has to be unique!')
+            ctk.CTkLabel(text='Username has to be unique!')
 
     
     def change_profile(self):
@@ -183,7 +184,7 @@ class GUI:
             new_image = Image.open(file_path)
             new_image = new_image.resize((40, 40))  # Resize to match the profile image size
             self.profile_photo = ImageTk.PhotoImage(new_image)
-            profile_label = Label(self.root, image=self.profile_photo)
+            profile_label = ctk.CTkLabel(self.root, image=self.profile_photo)
             profile_label.pack()
         
     def rename_profile(self, new_name: str):
@@ -212,14 +213,14 @@ class GUI:
         except Exception as e:
             logger.exception(str(e))
             frame = Frame().place(relx=0.5, rely=0.5, anchor='center')
-            Label(frame, text='Failed to connect to server!').pack()
-            Button(frame, text='Quit', command=self.quit).pack()
+            ctk.CTkLabel(frame, text='Failed to connect to server!').pack()
+            ctk.CTkButton(frame, text='Quit', command=self.quit).pack()
             return 'failed'
 
 
     def quit(self):
-        self.root.destroy()
         self.client_socket.close()
+        self.root.destroy()
         exit(0)
 
     def initialize_gui(self): # GUI initializer
@@ -229,7 +230,7 @@ class GUI:
         self.friend_list_button = []
 
         init_friend_command = INIT_FRIEND + self.name
-        self.client_socket.sendall(init_friend_command)
+        self.client_socket.sendall(init_friend_command.encode('utf-8'))
 
         
 
@@ -239,6 +240,8 @@ class GUI:
         if self.friend_list not in [None, []]:
             self.display_chat_box(self.friend_list[0])
             self.display_chat_entry_box()
+            self.listen_for_incoming_messages_in_a_thread()
+
         else:
             f = ctk.CTkFrame(self.root, fg_color= 'transparent', bg_color= 'transparent')
             ctk.CTkLabel(f, text='Welcome to Barudak Chat!', fg_color= 'transparent', bg_color= 'transparent').pack()
@@ -471,8 +474,6 @@ class GUI:
 
         if refresh == 0:
             try:
-                print("felix kontol")
-
                 self.scrollable_frame = ScrollableFrame(self.root, self.friend_list, height = 400, width =150)
                 self.scrollable_frame.pack(side = 'left')
                 self.friend_list = read_csv('data/' + str(self.name) + '/friends.data')
@@ -564,9 +565,7 @@ class GUI:
                 # user = message.split(":")[1]
                 # message = user + " has joined"
                 self.chat_transcript_area.insert('end', message + '\n')
-                self.chat_transcript_area.yview(END)
-            elif 'LOGIN' in message:
-                self.initialize_gui()
+                self.chat_transcript_area.yview(END)                
             else:
                 self.chat_transcript_area.insert('end', message + '\n')
                 self.chat_transcript_area.yview(END)
