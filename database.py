@@ -65,33 +65,18 @@ class DB:
             val = (new_name, old_name)
             mycursor.execute(sql, val)
             self.mydb.commit()
-            return True
+            return 'Success changing username'
         else:
-            return False
-    
-    def get_profile(self, name:str):
-        cursor = self.mydb.cursor()
-        sql = 'SELECT name, profile_pic FROM user WHERE name = %s'
-        val = (name,)
-        cursor.execute(sql,val)
-        
-        for (name, profile) in cursor:
-            profile_pic = profile
-        return profile_pic
-
+            return 'username already exist'
     
     def change_profile(self, name: str, new_profile:str):
-        try:
-            mycursor = self.mydb.cursor()
-            profile = self.convertToBinaryData(new_profile)
-            sql = 'UPDATE USER SET profile_pic = %s WHERE name = %s'
-            val = (profile, name)
+        mycursor = self.mydb.cursor()
+        profile = self.convertToBinaryData(new_profile)
+        sql = 'UPDATE USER SET profile_pic = %s WHERE name = %s'
+        val = (profile, name)
 
-            mycursor.execute(sql, val)
-            self.mydb.commit()
-            return True
-        except:
-            return False
+        mycursor.execute(sql, val)
+        self.mydb.commit()
 
     def add_friend(self, user_name:str, friend_name:str):
         #check user_id and friend_id
