@@ -37,27 +37,44 @@ class ChatServer:
     def receive_messages(self, so):
 
         while True:
-            incoming_buffer = so.recv(256) #initialize the buffer
+            incoming_buffer = so.recv(2048) #initialize the buffer
             if incoming_buffer:
-                print(incoming_buffer.decode('utf-8'))
-                if 'CREATE USER' in incoming_buffer.decode('utf-8'):
-                    result = self.mydb.create_user(incoming_buffer.decode('utf-8').split()[2], None)
+                message = incoming_buffer.decode('utf-8')
+                if 'CREATE USER' in message:
+                    result = self.mydb.create_user(message.split()[2], None)
                     if result:
                         so.sendall('SINGUP SUCCESS'.encode('utf-8'))
                     else:
                         so.sendall('FAILED SIGNUP'.encode('utf-8'))
-                elif 'LOGIN ' in incoming_buffer.decode('utf-8'):
-                    result = self.mydb.check_username_if_exists(incoming_buffer.decode('utf-8').split()[1])
-                    print('result', result)
+                elif 'LOGIN ' in message:
+                    result = self.mydb.check_username_if_exists(message.split()[1])
                     if result:
                         so.sendall('LOGIN SUCCESS'.encode('utf-8'))
                     else:
                         so.sendall('FAILED Username doesn\'t exist'.encode('utf-8'))
-                elif 'CHANGE USERNAME' in incoming_buffer.decode('utf-8'):
-                    result = self.mydb.change_username(incoming_buffer.decode('utf-8').split()[2], incoming_buffer.decode('utf-8').split()[3])
-                    so.sendall(result.encode('utf-8'))
+                elif 'CHANGE USERNAME' in message:
+                    result = self.mydb.change_username(message.split()[2], message.split()[3])
+                    if result:
+                        so.sendall('CHANGE USERNAME SUCCESS'.encode('utf-8'))
+                    else:
+                        so.sendall('FAILED CHANGE USERNAME'.encode('utf-8'))
+                elif 'INIT FRIEND' in message:
+                    result = self.mydb.list_friend(message.split()[2])
+                    so.sendall(' '.join(result).encode('utf-8'))
+                elif 'GET PROFILE' in message:
+                    result = self.mydb.get_profile(message.split()[2])
+                    if result:
+                        so.sendall(result.encode('utf-8'))
+                    else:
+                        so.sendall('None'.encode('utf-8'))
+                elif 'CHANGE PROFILE' in message:
+                    result = self.mydb.change_profile(message.split()[2], message.split()[3])
+                    if result:
+                        so.sendall('CHANGE PROFILE SUCCESS'.encode('utf-8'))
+                    else:
+                        so.sendall('CHANGE PROFILE FAILED'.encode('utf-8'))
                 else:
-                    self.last_received_message = incoming_buffer.decode('utf-8')
+                    self.last_received_message = message
             else:
                 break
         so.close()
