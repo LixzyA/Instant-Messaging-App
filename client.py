@@ -20,6 +20,21 @@ LOGIN = 'LOGIN '
 CHANGE_USERNAME = 'CHANGE USERNAME '
 INIT_FRIEND = 'INIT FRIEND '
 
+class ScrollableFrame(ctk.CTkScrollableFrame):
+    def __init__(self, master, friend_list, **kwargs):
+        super().__init__(master, **kwargs)
+
+        add_contact_image = Image.open("Resources\profile.png")
+        add_contact_image = add_contact_image.resize((30, 30))
+        self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
+
+        for friend in friend_list:
+            friend_button = ctk.CTkButton(master = self, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
+            friend_button.pack()
+
+    def show_chat(self, friend):
+        pass
+
 
 class GUI:
     client_socket = None
@@ -279,6 +294,14 @@ class GUI:
         self.setting_button.image = setting_photo
         self.setting_button.pack(anchor='w')
 
+        #group button
+        add_group_image = ctk.CTkImage(Image.open('Resources/addgroup.png'),  size=(40, 40))   
+        add_group_photo = add_group_image
+        self.add_group_button = ctk.CTkButton(menu, image=add_group_photo, command=partial(self.add_group, menu),text = '', fg_color= 'transparent', width=50,  hover_color="#B9B9B9")
+        self.add_group_button.photo = add_group_photo  
+        self.add_group_button.pack(anchor='w')
+        self.add_group_flag = 0
+    
         #Exit Button
         exit_image = ctk.CTkImage(Image.open('Resources/newexit.png'), size=(40, 40))
         exit_photo = exit_image
@@ -385,6 +408,23 @@ class GUI:
 
         #change_profile_button = Button(settings_window, text="Change Profile", command=self.show_change_profile_window)
         #change_profile_button.pack(pady=10)
+
+    def add_group(self, menu):
+        if self.add_group_flag==0:
+            self.add_group_flag=1
+            self.group_member_list_checkbox = []
+            self.member_list = []
+            self.scrollable_frame_clear()
+            self.create_group_label = ctk.CTkLabel(self.scrollable_frame, text="Create Group", text_color = "white", fg_color="#575353", font=("oswald", 20), width= 250, height=35, corner_radius=5)
+            self.create_group_label.pack()
+            checked = StringVar()
+            for x in range (len(self.friend_list_button)):
+                friend = self.friend_list[x]
+                self.checkbox = ctk.CTkCheckBox(self.scrollable_frame, text=friend, command=lambda: self.add_group_member(checked.get()), variable = checked, onvalue=friend, offvalue="del "+friend)
+                self.checkbox.pack()
+                self.group_member_list_checkbox.append(self.checkbox)
+            self.create_group_button= ctk.CTkButton(self.scrollable_frame, text="Create New Group",anchor="s", command=self.create_group)
+            self.create_group_button.pack(side='bottom', anchor = 'sw')
 
     def show_change_profile_window(self):
         change_profile_window = ctk.CTkToplevel(self.root)
@@ -575,19 +615,6 @@ class GUI:
             self.client_socket.close()
             exit(0)
     
-
-class ScrollableFrame(ctk.CTkScrollableFrame, GUI):
-    def __init__(self, master, friend_list, **kwargs):
-        super().__init__(master, **kwargs)
-    
-        add_contact_image = Image.open("Resources\profile.png")
-        add_contact_image = add_contact_image.resize((30, 30))
-        self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
-
-        for friend in friend_list:
-            friend_button = ctk.CTkButton(master = self, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
-            friend_button.pack()
-
 
 logger = logging.getLogger() # for error logging
 #the mail function 
