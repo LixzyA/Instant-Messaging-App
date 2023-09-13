@@ -14,11 +14,14 @@ import os
 from database import *
 import customtkinter as ctk
 from customtkinter import CTk
+from copy import *
 
 CREATE_USER = 'CREATE USER '
 LOGIN = 'LOGIN '
 CHANGE_USERNAME = 'CHANGE USERNAME '
-INIT_FRIEND = 'INIT FRIEND'
+CHANGE_PROFILE = 'CHANGE PROFILE '
+INIT_FRIEND = 'INIT FRIEND '
+GET_PROFILE = 'GET PROFILE '
 
 def read_csv(name:str):
     file = open(name, 'r').read()
@@ -38,9 +41,10 @@ class ScrollableFrame(ctk.CTkScrollableFrame):
         for friend in friend_list:
             friend_button = ctk.CTkButton(master = self, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
             friend_button.pack()
-
-    def show_chat(self, friend):
+        
+    def show_chat(self):
         pass
+
 
 class GUI:
     client_socket = None
@@ -145,7 +149,7 @@ class GUI:
             self.logo_label.destroy()
             self.frame.destroy()
             login_user_command = LOGIN + self.name
-            self.client_socket.send(login_user_command.encode('utf-8'))
+            self.client_socket.sendall(login_user_command.encode('utf-8'))
 
             wait = True
             while wait:
@@ -186,6 +190,10 @@ class GUI:
             self.profile_photo = ImageTk.PhotoImage(new_image)
             profile_label = ctk.CTkLabel(self.root, image=self.profile_photo)
             profile_label.pack()
+
+            image = open(file_path, 'rb').read()
+            self.client_socket.sendall((self.name + ' ' + image).encode('utf-8'))
+
         
     def rename_profile(self, new_name: str):
         try:
@@ -232,6 +240,14 @@ class GUI:
         init_friend_command = INIT_FRIEND + self.name
         self.client_socket.sendall(init_friend_command.encode('utf-8'))
 
+        wait = True
+        while wait:
+            buffer = self.client_socket.recv(2048)
+            message = buffer.decode('utf-8')
+            if message:
+                wait = False
+        
+        self.friend_list = message.split()
         
 
         self.root.geometry('800x400')
@@ -253,14 +269,22 @@ class GUI:
         menu = ctk.CTkFrame(self.root, fg_color='#575353')
         menu.pack(side='left', padx=10, pady=10, fill='y')
         
-        self.profile_pic_path="data/"+self.name+"/profile.jpg"
+        get_profile_command = GET_PROFILE + self.name
+        self.client_socket.sendall(get_profile_command.encode('utf-8'))
 
-        if not os.path.exists(self.profile_pic_path):#checking for existing profile picture, if not found switch to defult photo
-           self.profile_pic_path="Resources/profile.png"
-        self.profile_image=Image.open(self.profile_pic_path)
-        self.profile_image=self.profile_image.resize((40,40))
-        self.profile_img = ImageTk.PhotoImage(self.profile_image)
-        default_profile_image = ctk.CTkImage(Image.open('Resources/default_profile.png'), size=(40, 40))  
+        wait = True
+        while wait:
+            buffer = self.client_socket.recv(2048)
+            message = buffer.decode('utf-8')
+            if message:
+                wait = False
+         
+        if message not in ['None', None, ' ']:
+            image =  message
+        else:
+            image = 'Resources/default_profile.png'
+        
+        default_profile_image = ctk.CTkImage(Image.open(image), size=(40, 40))  
         self.profile_photo = default_profile_image
         profile_label = ctk.CTkLabel(menu, image=self.profile_photo, text= ' ', pady=5)
         profile_label.pack()
@@ -365,25 +389,25 @@ class GUI:
              file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif *.bmp *.ppm *.pgm")])
              if file_path:
                 image = ctk.CTkImage(Image.open(file_path), size=(40, 40))
-                self.profile_image=image
-                photo = ctk.CTkImage(self.profile_image)
-                self.profile_photo.config(image=photo)
+                self.profile_photo=image
+                photo = ctk.CTkImage(self.profile_photo)
+                self.profile_photo.configure(image=photo)
                 self.profile_photo.image=photo
                 image2=Image.open(file_path)
                 image2=image2.resize((80,80))
                 photo2 = ctk.CTkImage(image2)
-                self.settings_profile_img=photo2
-                self.settings_profile_photo.config(image=self.settings_profile_img)
-                self.settings_profile_photo.image=self.settings_profile_img
+                self.settings_profile_image=photo2
+                self.settings_profile_photo.config(image=self.settings_profile_image)
+                self.settings_profile_photo.image=self.settings_profile_image
 
 
         self.flag=0
         settings_window = ctk.CTkToplevel(self.root)
         settings_window.title("Settings")
 
-        self.settings_profile_image=self.profile_image.resize((80,80))
-        self.settings_profile_img = ImageTk.PhotoImage(self.settings_profile_image)
-        self.settings_profile_photo=ctk.CTkLabel(settings_window,image=self.settings_profile_img)
+        self.settings_profile_image=copy(self.profile_photo)
+        self.settings_profile_image.configure(size = (80,80))
+        self.settings_profile_photo=ctk.CTkLabel(settings_window,image=self.settings_profile_image, text = ' ')
         self.settings_profile_photo.pack(anchor="center")
 
         settings_username=ctk.CTkLabel(settings_window, text=self.name)
@@ -394,9 +418,6 @@ class GUI:
 
         change_photo_button = ctk.CTkButton(settings_window, text="Change Profile Picture", command=change_photo)
         change_photo_button.pack(pady=10)
-
-        #change_profile_button = Button(settings_window, text="Change Profile", command=self.show_change_profile_window)
-        #change_profile_button.pack(pady=10)
 
     def show_change_profile_window(self):
         change_profile_window = ctk.CTkToplevel(self.root)
@@ -441,7 +462,7 @@ class GUI:
     def save_friend(self, name:str):
         file = open('data/'+ self.name +'/friends.data', 'a')
         file.write(name + '\n')
-        file.close()    
+        file.close()
 
     def pack_before(self, widget, before_widget):
         # Function to pack a widget before another widget
@@ -476,35 +497,14 @@ class GUI:
             try:
                 self.scrollable_frame = ScrollableFrame(self.root, self.friend_list, height = 400, width =150)
                 self.scrollable_frame.pack(side = 'left')
-                self.friend_list = read_csv('data/' + str(self.name) + '/friends.data')
-                print(self.friend_list[0])
-                for friend in self.friend_list:
-                    print(1)
-                    print("pass")
-                    #print(friend)
-                    new_friend_button = ctk.CTkButton(self.scrollable_frame, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
-                    new_friend_button.image = self.add_contact_photo
-                    # Place the new friend button at the top of the friend list
-                    new_friend_button.pack()
-                    self.friend_list_button.insert(0, new_friend_button)  # Update the friend list button list
-            
-
-            except FileNotFoundError as e:
-                parent_dir = 'data/'
-                dir = self.name
-                path = join(parent_dir, dir)
-                mkdir(path)
-                open(path + '/friends.data', 'w')
-
+                self.friend_list = []
             except:
                 pass
 
         else:  # Refresh friend list based on updated data
-            self.friend_list = read_csv('data/' + str(self.name) + '/friends.data')
+            print('friend list', self.friend_list)
             for friend in self.friend_list:
                 self.create_friend_button(friend)
-
-    
 
     def show_chat(self, name: str):
         chat_history = None
@@ -550,7 +550,8 @@ class GUI:
     
     def create_friend_button(self, friend_name):
         # Create a friend button based on the given name and add it to the friends_frame
-        friend_button = ctk.CTkButton(self.friends_frame, text=friend_name, command=partial(self.show_chat, friend_name), padding=(10, 8, 20, 8), style="Custom.TButton", image=self.add_contact_photo, compound=LEFT)
+
+        friend_button = ctk.CTkButton(self.friends_frame, text=friend_name, command=partial(self.show_chat, friend_name), padding=(10, 8, 20, 8), image=self.add_contact_photo, compound=LEFT)
         friend_button.image = self.add_contact_photo(anchor='w')
     
     #function to recieve msg
@@ -565,7 +566,13 @@ class GUI:
                 # user = message.split(":")[1]
                 # message = user + " has joined"
                 self.chat_transcript_area.insert('end', message + '\n')
-                self.chat_transcript_area.yview(END)                
+                self.chat_transcript_area.yview(END)
+            elif 'CHANGE PROFILE' in message:
+                if message.split()[2].lower() in ['success']:
+                    messagebox.INFO('Changed Profile picture')
+                else:
+                    messagebox.showerror('Error', 'An error occured during changing profile')
+
             else:
                 self.chat_transcript_area.insert('end', message + '\n')
                 self.chat_transcript_area.yview(END)
