@@ -91,22 +91,19 @@ class ChatServer:
             if socket is not senders_socket:
                 socket.sendall(self.last_received_message.encode('utf-8'))
 
-    def send_message_to_client(self, target_client):
+    def send_message_to_client(self, target_client: Client):
         #send a message directly to the client if client is in
         #self.clients_list
-        sliced = self.last_received_message.split('end')
-        info = sliced[0]
-        message = sliced[1]
-
-        sliced = info.split()
+        sliced = self.last_received_message.split()
         sender = sliced[0]
-        receiver = sliced[1]
+        message = sliced[1:-1]
+        receiver = sliced[-1]
 
+        print(target_client.name)
 
         for client in self.clients_list:
-            if receiver in client.name:
-                client.so.sendall(message.encode('utf-8'))
-                # target_client.so.sendall(self.last_received_message.encode('utf-8'))
+            if receiver in target_client.name:
+                client.so.sendall(' '.join(message).encode('utf-8'))
             
     def receive_messages_in_a_new_thread(self):
         while True:
