@@ -20,27 +20,6 @@ LOGIN = 'LOGIN '
 CHANGE_USERNAME = 'CHANGE USERNAME '
 INIT_FRIEND = 'INIT FRIEND'
 
-def read_csv(name:str):
-    file = open(name, 'r').read()
-    if len(file) > 0:
-        return file.split('\n')
-    else:
-        return []
-    
-class ScrollableFrame(ctk.CTkScrollableFrame):
-    def __init__(self, master, friend_list, **kwargs):
-        super().__init__(master, **kwargs)
-    
-        add_contact_image = Image.open("Resources\profile.png")
-        add_contact_image = add_contact_image.resize((30, 30))
-        self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
-
-        for friend in friend_list:
-            friend_button = ctk.CTkButton(master = self, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
-            friend_button.pack()
-
-    def show_chat(self, friend):
-        pass
 
 class GUI:
     client_socket = None
@@ -232,6 +211,15 @@ class GUI:
         init_friend_command = INIT_FRIEND + self.name
         self.client_socket.sendall(init_friend_command.encode('utf-8'))
 
+        wait = True
+        while wait:
+            buffer = self.client_socket.recv(2048)
+            message = buffer.decode('utf-8')
+            if message:
+                wait = False
+        
+        self.friend_list = message.split()
+        self.chat_selected = self.friend_list[0]
         
 
         self.root.geometry('800x400')
@@ -471,36 +459,15 @@ class GUI:
             add_contact_image = add_contact_image.resize((30, 30))
             self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
 
-
         if refresh == 0:
             try:
                 self.scrollable_frame = ScrollableFrame(self.root, self.friend_list, height = 400, width =150)
                 self.scrollable_frame.pack(side = 'left')
-                self.friend_list = read_csv('data/' + str(self.name) + '/friends.data')
-                print(self.friend_list[0])
-                for friend in self.friend_list:
-                    print(1)
-                    print("pass")
-                    #print(friend)
-                    new_friend_button = ctk.CTkButton(self.scrollable_frame, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
-                    new_friend_button.image = self.add_contact_photo
-                    # Place the new friend button at the top of the friend list
-                    new_friend_button.pack()
-                    self.friend_list_button.insert(0, new_friend_button)  # Update the friend list button list
-            
-
-            except FileNotFoundError as e:
-                parent_dir = 'data/'
-                dir = self.name
-                path = join(parent_dir, dir)
-                mkdir(path)
-                open(path + '/friends.data', 'w')
-
+                # self.friend_list = []
             except:
                 pass
 
         else:  # Refresh friend list based on updated data
-            self.friend_list = read_csv('data/' + str(self.name) + '/friends.data')
             for friend in self.friend_list:
                 self.create_friend_button(friend)
 
@@ -508,27 +475,31 @@ class GUI:
 
     def show_chat(self, name: str):
         chat_history = None
-        self.chat_selected = name
-        try:
-            file = open('data/' + self.name + '/' + name + '.chat')
-            chat_history= file.readlines()
-            file.close()
-            for chat in chat_history:
-                self.chat_transcript_area.insert(INSERT, chat + '\n')
-                self.chat_transcript_area.yview(END)
+        self.chat_selected_label.pack_forget()
+        self.chat_selected_label.configure(text = 'name')
+        self.chat_selected_label.pack(side='top', anchor='w', padx=5)
+        
+        # try:
+        #     file = open('data/' + self.name + '/' + name + '.chat')
+        #     chat_history= file.readlines()
+        #     file.close()
+        #     for chat in chat_history:
+        #         self.chat_transcript_area.insert(INSERT, chat + '\n')
+        #         self.chat_transcript_area.yview(END)
 
-        except FileNotFoundError as e:
-            logger.exception(str(e))
-            path = 'data/' + self.name + '/' + name
-            open(path +'.chat', 'x')
-            self.show_chat(name)
+        # except FileNotFoundError as e:
+        #     logger.exception(str(e))
+        #     path = 'data/' + self.name + '/' + name
+        #     open(path +'.chat', 'x')
+        #     self.show_chat(name)
 
     def save_chat(self):
         pass
         
     def display_chat_box(self, name:str): 
         frame = ctk.CTkFrame(self.root, fg_color='transparent')
-        ctk.CTkLabel(frame, text= name).pack(side='top', anchor='w', padx=5)
+        self.chat_selected_label = ctk.CTkLabel(frame, text= name)
+        self.chat_selected_label.pack(side='top', anchor='w', padx=5)
         self.chat_transcript_area = ctk.CTkTextbox(frame, width=550, height=200, font=("Serif", 12))
         self.chat_transcript_area.pack(side='left', padx=5)
         frame.pack(side='top')
@@ -562,8 +533,6 @@ class GUI:
             message = buffer.decode('utf-8')
          
             if "joined" in message:
-                # user = message.split(":")[1]
-                # message = user + " has joined"
                 self.chat_transcript_area.insert('end', message + '\n')
                 self.chat_transcript_area.yview(END)                
             else:
@@ -573,18 +542,15 @@ class GUI:
         so.close()
     
     
-    def on_join(self):
-        # if len(self.name_widget.get()) == 0:
-        #     messagebox.showerror(
-        #         "Enter your name", "Enter your name to send a message")
-        #     return
-        # self.name_widget.config(state='disabled')
-        self.client_socket.send(("joined:" + self.name).encode('utf-8'))
+    # def on_join(self):
+    #     # if len(self.name_widget.get()) == 0:
+    #     #     messagebox.showerror(
+    #     #         "Enter your name", "Enter your name to send a message")
+    #     #     return
+    #     # self.name_widget.config(state='disabled')
+    #     self.client_socket.send(("joined:" + self.name).encode('utf-8'))
 
     def on_enter_key_pressed(self, event):
-        # if len(self.name_widget.get()) == 0:
-        #     messagebox.showerror("Enter your name", "Enter your name to send a message")
-        #     return
         self.send_chat()
         self.clear_text()
 
@@ -592,15 +558,16 @@ class GUI:
         self.enter_text_widget.delete(1.0, 'end')
 
     def send_chat(self):
-        senders_name = self.name + ": "
+        senders_name = self.name + " "
+        target_name = self.chat_selected
         data = self.enter_text_widget.get(1.0, 'end').strip()
-        message = (senders_name + data).encode('utf-8')
-        self.chat_transcript_area.insert('end', message.decode('utf-8') + '\n')
+        message = (senders_name + data)
+        self.chat_transcript_area.insert('end', message + '\n')
         self.chat_transcript_area.yview(END)
+        message = (message + ' ' + target_name).encode('utf-8')
         self.client_socket.send(message)
-        self.client_socket.send(self.chat_selected.encode('utf-8'))
         self.enter_text_widget.delete(1.0, 'end')
-        return 'break'
+
 
     def on_close_window(self):
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
@@ -608,6 +575,20 @@ class GUI:
             self.client_socket.close()
             exit(0)
     
+
+class ScrollableFrame(ctk.CTkScrollableFrame, GUI):
+    def __init__(self, master, friend_list, **kwargs):
+        super().__init__(master, **kwargs)
+    
+        add_contact_image = Image.open("Resources\profile.png")
+        add_contact_image = add_contact_image.resize((30, 30))
+        self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
+
+        for friend in friend_list:
+            friend_button = ctk.CTkButton(master = self, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
+            friend_button.pack()
+
+
 logger = logging.getLogger() # for error logging
 #the mail function 
 if __name__ == '__main__':
