@@ -285,6 +285,13 @@ class GUI:
         profile_label = ctk.CTkLabel(menu, image=self.profile_photo, text= ' ', pady=5)
         profile_label.pack()
         
+        #contact button
+        contact_image = ctk.CTkImage(Image.open('Resources/contact button.png'),  size=(40, 40))   
+        contact_photo = contact_image
+        self.contact_button = ctk.CTkButton(menu, image=contact_photo, command=self.open_contact,text = '', fg_color= 'transparent', width=50,  hover_color="#B9B9B9")
+        self.contact_button.photo = contact_photo  
+        self.contact_button.pack(anchor='w')
+        
         #Add friend Button
         add_friend_image = ctk.CTkImage(Image.open('Resources/addfriend.png'), size=(40, 40))   
         add_friend_photo = add_friend_image
@@ -615,6 +622,37 @@ class GUI:
         #     open(path +'.chat', 'x')
         #     self.show_chat(name)
 
+
+    def open_contact(self):
+        change_contact_window = ctk.CTkToplevel(self.root)
+        change_contact_window.title("Friend List")
+        change_contact_window.geometry("300x400")  
+        change_contact_window.wm_transient(self.root)
+
+        friend_list_frame = ctk.CTkFrame(change_contact_window)
+        friend_list_frame.pack(fill="both", expand=True)
+
+        self.create_friend_list(friend_list_frame)
+           
+    def create_friend_list(self, frame):
+        add_contact_image = Image.open("Resources\profile.png")
+        add_contact_image = add_contact_image.resize((100, 100))
+        self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
+
+        if not hasattr(self, 'add_contact_photo'):
+            add_contact_image = Image.open("Resources\profile.png")
+            add_contact_image = add_contact_image.resize((30, 30))
+            self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
+
+        try:
+            for friend in self.friend_list:
+                friend_button = ctk.CTkButton(frame, text=friend, command=partial(self.show_chat, friend),
+                                            image=self.add_contact_photo, anchor='w', fg_color="transparent",
+                                            text_color="black", hover_color="#B9B9B9")
+                friend_button.pack()
+                self.friend_list_button.append(friend_button)
+        except:
+            pass
         
     def display_chat_box(self, name:str): 
         frame = ctk.CTkFrame(self.root, fg_color='transparent')
