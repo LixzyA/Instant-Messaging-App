@@ -1,4 +1,5 @@
 import mysql.connector
+import logging
 
 class DB:
 
@@ -40,20 +41,15 @@ class DB:
             return False
         
     def check_username_if_exists(self, username_str):
-        mycursor = self.mydb.cursor()
+        mycursor = self.mydb.cursor(buffered=True)
         sql = 'SELECT name FROM user where name = %s'
         val = (username_str,)
         mycursor.execute(sql, val)
 
-        myresult = mycursor.fetchone()
-        if myresult is not None:
-            for row in myresult:
-                if username_str in row:
-                    return True
-                else:
-                    return False
-        else:
-            return False
+        for (name, ) in mycursor:
+            if name == username_str:
+                return True
+        return False
 
     def change_username(self, old_name: str, new_name: str):
         #check if new_name is already used
@@ -65,18 +61,34 @@ class DB:
             val = (new_name, old_name)
             mycursor.execute(sql, val)
             self.mydb.commit()
-            return 'Success changing username'
+            return True
         else:
-            return 'username already exist'
+            return False
     
-    def change_profile(self, name: str, new_profile:str):
-        mycursor = self.mydb.cursor()
-        profile = self.convertToBinaryData(new_profile)
-        sql = 'UPDATE USER SET profile_pic = %s WHERE name = %s'
-        val = (profile, name)
+    def get_profile(self, name:str):
+        cursor = self.mydb.cursor()
+        sql = 'SELECT name, profile_pic FROM user WHERE name = %s'
+        val = (name,)
+        cursor.execute(sql,val)
+        
+        for (name, profile) in cursor:
+            profile_pic = profile
+        return profile_pic
 
-        mycursor.execute(sql, val)
-        self.mydb.commit()
+    
+    def change_profile(self, name: str, new_profile):
+        try:
+            mycursor = self.mydb.cursor()
+            # profile = self.convertToBinaryData(new_profile)
+            sql = 'UPDATE user SET profile_pic = %s WHERE name = %s'
+            val = (new_profile, name)
+
+            mycursor.execute(sql, val)
+            self.mydb.commit()
+            return True
+        except Exception as e:
+            log.exception(e)
+            return False
 
     def add_friend(self, user_name:str, friend_name:str):
         #check user_id and friend_id
@@ -91,6 +103,7 @@ class DB:
         val =(friend_name,)
         mycursor.execute(sql, val)
 
+        friend_id = None
         for (name, users_id) in mycursor:
             friend_id = users_id
 
@@ -101,7 +114,7 @@ class DB:
             mycursor.execute(sql,val)
             result = mycursor.fetchone()
 
-            if result[0] < 1:
+            if result[0] < 1 and friend_id != user_id:
                 sql = 'INSERT IGNORE INTO friends(user_id, friend_id) values (%s, %s)'
                 val = (user_id, friend_id)
                 mycursor.execute(sql,val)
@@ -109,10 +122,10 @@ class DB:
                 mycursor.execute(sql,val)
                 self.mydb.commit()
 
-            return 'Success adding friend'
+            return True
         
         else:
-            return 'Friend doesn\t exist' 
+            return False
 
     def list_friend(self, name:str):
         sql = 'SELECT name, user_id FROM user WHERE name = %s'
@@ -212,27 +225,24 @@ class DB:
             print(x)
 
 
-    def print_table(self, table_name: str):
-        sql = 'SELECT * FROM '+ table_name
-        mycursor = self.mydb.cursor()
-        mycursor.execute(sql)
+    def delete(self,):
+        sql = 'DELETE FROM friends'
+        cursor = self.mydb.cursor()
+        cursor.execute(sql)
+        self.mydb.commit()
 
-        myresult = mycursor.fetchall()
-        for x in myresult:
-            print(x) 
-
-
-
+log = logging.getLogger()
 if __name__ == '__main__':
     mydb = DB()
-    # mydb.create_user('lix', 'Resources/profile.png')
-    res = mydb.create_user('Juan', '')
-    print('create user', res)
-    res = mydb.add_friend('Felix', 'Juan')
+    print(mydb.check_username_if_exists('jotin'))
+    # # mydb.create_user('lix', 'Resources/profile.png')
+    # res = mydb.create_user('Juan', '')
+    # print('create user', res)
+    # res = mydb.add_friend('Felix', 'Juan')
     
-    # print('adding friend', res)
-    ls = mydb.list_friend('Felix')
-    print(ls)
+    # # print('adding friend', res)
+    # ls = mydb.list_friend('Felix')
+    # print(ls)
 '''
 chatroom = (room_id auto_increment, room_type, creator_id)
 user = (user_id, name, profile_pic)

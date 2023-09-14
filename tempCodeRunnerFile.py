@@ -1,0 +1,1 @@
+print(self.last_received_message)

@@ -14,29 +14,27 @@ import os
 from database import *
 import customtkinter as ctk
 from customtkinter import CTk
+from copy import *
+import io
 
 CREATE_USER = 'CREATE USER '
 LOGIN = 'LOGIN '
 CHANGE_USERNAME = 'CHANGE USERNAME '
 CHANGE_PROFILE = 'CHANGE PROFILE '
 INIT_FRIEND = 'INIT FRIEND '
+ADD_FRIEND = 'ADD FRIEND '
 GET_PROFILE = 'GET PROFILE '
 
+
 class ScrollableFrame(ctk.CTkScrollableFrame):
-    def __init__(self, master, friend_list, **kwargs):
+    def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
 
-        add_contact_image = Image.open("Resources\profile.png")
-        add_contact_image = add_contact_image.resize((30, 30))
-        self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
 
-        for friend in friend_list:
-            friend_button = ctk.CTkButton(master = self, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
-            friend_button.pack()
-
-    def show_chat(self, friend):
+        
+    def show_chat(self):
         pass
-
+        
 
 class GUI:
     client_socket = None
@@ -110,8 +108,7 @@ class GUI:
                     message = buffer.decode('utf-8')
                     if message:
                         wait = False
-
-                if 'SIGNUP SUCCESS' in message.upper():
+                if 'SUCCESS' in message.upper():
                     self.initialize_gui()
                 else:
                     messagebox.showerror(title='Error',message='Something went wrong\nRestart the app')
@@ -148,7 +145,7 @@ class GUI:
                 message = buffer.decode('utf-8')
                 if message is not None:
                     wait = False
-            if 'LOGIN SUCCESS' in message.upper():
+            if 'SUCCESS' in message.upper():
                 self.initialize_gui()
             else:
                 messagebox.showerror(title='Error',message='Something went wrong\nRestart the app')
@@ -172,15 +169,21 @@ class GUI:
             logger.exception(str(e))
             messagebox.showerror("Profile Change Error", "An error occurred while changing the profile name.")
             
-    def change_profile_image(self):
+    def change_profile_image(self): # masih ada yang salah
         file_path = filedialog.askopenfilename(title="Select an Image", filetypes=[("Image Files", "*.png *.jpg *.jpeg")])
 
         if file_path:
-            new_image = Image.open(file_path)
-            new_image = new_image.resize((40, 40))  # Resize to match the profile image size
-            self.profile_photo = ImageTk.PhotoImage(new_image)
+            print('file path', file_path)
+            print(os.stat(file_path).st_size)
+            new_image = ctk.CTkImage(Image.open(file_path), size = (40,40))
+            # new_image = new_image.resize((40, 40))  # Resize to match the profile image size
+            self.profile_photo = new_image
             profile_label = ctk.CTkLabel(self.root, image=self.profile_photo)
             profile_label.pack()
+            image = open(file_path, 'rb').read()
+            
+            self.client_socket.sendall((self.name + ' ' + image).encode('utf-8'))
+            
         
     def rename_profile(self, new_name: str):
         try:
@@ -227,7 +230,6 @@ class GUI:
 
         init_friend_command = INIT_FRIEND + self.name
         self.client_socket.sendall(init_friend_command.encode('utf-8'))
-
         wait = True
         while wait:
             buffer = self.client_socket.recv(2048)
@@ -235,8 +237,11 @@ class GUI:
             if message:
                 wait = False
         
-        self.friend_list = message.split()
-        self.chat_selected = self.friend_list[0]
+        if message not in ['empty', ' ', None]:
+            self.friend_list = message.split()
+            self.chat_selected = self.friend_list[0]
+        else:
+            self.friend_list = []
         
 
         self.root.geometry('800x400')
@@ -263,17 +268,19 @@ class GUI:
 
         wait = True
         while wait:
-            buffer = self.client_socket.recv(2048)
-            message = buffer.decode('utf-8')
+            buffer = self.client_socket.recv(16777215)
+            message = buffer
             if message:
                 wait = False
          
-        if message not in ['None', None, ' ']:
+        if message not in [b'None', None, ' ', 'None']:
             image =  message
+            default_profile_image = ctk.CTkImage(Image.open(io.BytesIO(image)), size=(40, 40))  
         else:
             image = 'Resources/default_profile.png'
+            default_profile_image = ctk.CTkImage(Image.open(image), size=(40, 40))  
+
         
-        default_profile_image = ctk.CTkImage(Image.open(image), size=(40, 40))  
         self.profile_photo = default_profile_image
         profile_label = ctk.CTkLabel(menu, image=self.profile_photo, text= ' ', pady=5)
         profile_label.pack()
@@ -281,16 +288,17 @@ class GUI:
         #Add friend Button
         add_friend_image = ctk.CTkImage(Image.open('Resources/addfriend.png'), size=(40, 40))   
         add_friend_photo = add_friend_image
-        self.add_friend_button = ctk.CTkButton(menu, image=add_friend_photo, command=partial(self.add_friend, menu), text = '', fg_color= 'transparent', width=50,  hover_color="#B9B9B9")
+        self.add_friend_button = ctk.CTkButton(menu, image=add_friend_photo, command=self.add_friend, text = '', fg_color= 'transparent', width=50,  hover_color="#B9B9B9")
         self.add_friend_button.photo = add_friend_photo  
         self.add_friend_button.pack(anchor='w')
         
         #group button
         add_group_image = ctk.CTkImage(Image.open('Resources/addgroup.png'),  size=(40, 40))   
         add_group_photo = add_group_image
-        self.add_group_button = ctk.CTkButton(menu, image=add_group_photo, command=partial(self.add_friend, menu),text = '', fg_color= 'transparent', width=50,  hover_color="#B9B9B9")
+        self.add_group_button = ctk.CTkButton(menu, image=add_group_photo, command=partial(self.add_group, menu),text = '', fg_color= 'transparent', width=50,  hover_color="#B9B9B9")
         self.add_group_button.photo = add_group_photo  
         self.add_group_button.pack(anchor='w')
+        self.add_group_flag = 0
 
         #Add Friend entry
         self.add_friend_entry = ctk.CTkEntry(menu)
@@ -304,14 +312,6 @@ class GUI:
         self.setting_button.image = setting_photo
         self.setting_button.pack(anchor='w')
 
-        #group button
-        add_group_image = ctk.CTkImage(Image.open('Resources/addgroup.png'),  size=(40, 40))   
-        add_group_photo = add_group_image
-        self.add_group_button = ctk.CTkButton(menu, image=add_group_photo, command=partial(self.add_group, menu),text = '', fg_color= 'transparent', width=50,  hover_color="#B9B9B9")
-        self.add_group_button.photo = add_group_photo  
-        self.add_group_button.pack(anchor='w')
-        self.add_group_flag = 0
-    
         #Exit Button
         exit_image = ctk.CTkImage(Image.open('Resources/newexit.png'), size=(40, 40))
         exit_photo = exit_image
@@ -319,6 +319,13 @@ class GUI:
        
         self.exit_button.image = exit_photo 
         self.exit_button.pack(side='bottom', anchor='sw', pady=(0, 10))
+
+        #Back Button
+        back_image = ctk.CTkImage(Image.open('Resources/back.png'), size=(40, 40))
+        back_photo = back_image
+        self.back_button = ctk.CTkButton(menu, image=back_photo, command=self.back, fg_color='transparent', text='', width=50,  hover_color="#B9B9B9")
+        self.back_button.pack(side='bottom', anchor='sw')
+
 
         def on_button_hover(event):
             self.root.config(cursor='hand2')
@@ -339,7 +346,7 @@ class GUI:
         self.scrollable_frame_clear()
         self.show_friend(1)
 
-    def add_friend(self, menu):
+    def add_friend(self):
         self.scrollable_frame_clear()
 
         addfriend_image = ctk.CTkImage(Image.open('Resources/addfriend.png'), size=(100, 100))   
@@ -347,11 +354,11 @@ class GUI:
 
         self.add_friend_entry = ctk.CTkEntry(self.scrollable_frame)
         self.add_friend_button2 = ctk.CTkButton(self.scrollable_frame, text='add', command=self.submit)
-        addfriendphoto_label = ctk.CTkLabel(self.scrollable_frame, image=addfriend_photo, corner_radius = 40, text= '', pady=5)
-        addfriend_label = ctk.CTkLabel(self.scrollable_frame, text= "Find a New Friend!", corner_radius = 10, font = ("oswald", 14), text_color = "white", pady=5, fg_color="#575353")
+        self.addfriendphoto_label = ctk.CTkLabel(self.scrollable_frame, image=addfriend_photo, corner_radius = 40, text= '', pady=5)
+        self.addfriend_label = ctk.CTkLabel(self.scrollable_frame, text= "Find a New Friend!", corner_radius = 10, font = ("oswald", 14), text_color = "white", pady=5, fg_color="#575353")
 
-        addfriend_label.pack(pady= 30)
-        addfriendphoto_label.pack(pady= 30)
+        self.addfriend_label.pack(pady= 30)
+        self.addfriendphoto_label.pack(pady= 30)
         self.add_friend_entry.pack(pady = 15)
         self.add_friend_button2.pack(side=TOP)
         self.add_friend_entry.focus_set()
@@ -435,26 +442,36 @@ class GUI:
         def change_photo():
              file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif *.bmp *.ppm *.pgm")])
              if file_path:
-                image = ctk.CTkImage(Image.open(file_path), size=(40, 40))
-                self.profile_image=image
-                photo = ctk.CTkImage(self.profile_image)
-                self.profile_photo.config(image=photo)
+                compressed_image = Image.open(file_path)
+                compressed_image.resize((100,100))
+                compressed_image.save('profile_images/' + self.name + '.jpg', optimize=True, quality = 20)
+                
+                image = ctk.CTkImage(compressed_image)
+                image.configure(size =(40,40))
+                self.profile_photo=image
+                photo = copy(self.profile_photo)
+                self.profile_photo.configure(image=photo)
                 self.profile_photo.image=photo
-                image2=Image.open(file_path)
-                image2=image2.resize((80,80))
-                photo2 = ctk.CTkImage(image2)
-                self.settings_profile_img=photo2
-                self.settings_profile_photo.config(image=self.settings_profile_img)
-                self.settings_profile_photo.image=self.settings_profile_img
+
+                photo2 = ctk.CTkImage(compressed_image).configure(size = (80,80))
+                # photo2 = ctk.CTkImage(Image.open(file_path), size=(80,80))
+                self.settings_profile_image=photo2
+                self.settings_profile_photo.configure(image=self.settings_profile_image)
+                self.settings_profile_photo.image=self.settings_profile_image
+
+                binary = open('profile_images/' + self.name + '.jpg', 'rb').read()
+                change_profile_command = (CHANGE_PROFILE + self.name)
+                self.client_socket.sendall(change_profile_command.encode('utf-8'))
+                self.client_socket.sendall(binary)
 
 
         self.flag=0
         settings_window = ctk.CTkToplevel(self.root)
         settings_window.title("Settings")
 
-        self.settings_profile_image=self.profile_image.resize((80,80))
-        self.settings_profile_img = ImageTk.PhotoImage(self.settings_profile_image)
-        self.settings_profile_photo=ctk.CTkLabel(settings_window,image=self.settings_profile_img)
+        self.settings_profile_image=copy(self.profile_photo)
+        self.settings_profile_image.configure(size = (80,80))
+        self.settings_profile_photo=ctk.CTkLabel(settings_window,image=self.settings_profile_image, text = ' ')
         self.settings_profile_photo.pack(anchor="center")
 
         settings_username=ctk.CTkLabel(settings_window, text=self.name)
@@ -481,35 +498,48 @@ class GUI:
         change_button.pack()
 
     def submit(self):
-        name = self.e.get()
+        name = self.add_friend_entry.get()
         if name.strip():
             if len(name) > 11:
                 messagebox.showerror("Error", "username does not exist")
             else:
-                self.save_friend(name)
+                add_friend_command = (ADD_FRIEND + self.name + ' ' + name).encode('utf-8')
+                self.client_socket.sendall(add_friend_command)
+
+                wait = True
+                while wait:
+                    try:
+                        if 'Friend add' in self.last_received_message:
+                            wait = False
+                            break
+                    except:
+                        pass                        
+                print(self.last_received_message)
                 self.add_friend_entry.delete(0, END)
                 self.add_friend_entry.pack_forget()
                 self.add_friend_button2.pack_forget()
+                self.addfriend_label.pack_forget()
+                self.addfriendphoto_label.pack_forget()
                 self.add_friend_button.configure(state='normal')
 
-                # Add the new friend to the friend list without refreshing
-                self.friend_list.append(name)
+                if 'success' in self.last_received_message:
+                    # perlu add semua button          
+                    friend_button1 = ctk.CTkButton(self.scrollable_frame, text=name, command=partial(self.show_chat, name), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
+                    friend_button1.pack()
+                self.friend_list_button = []
 
-                # Create a new friend button
-                truncated_name = name[:11] 
-                # new_friend_button = Button( text=truncated_name, command=partial(self.show_chat, name),
-                #                         padding=(20, 8, 20, 8), style="Custom.TButton", image=self.add_contact_photo,
-                #                         compound=LEFT)
-                # new_friend_button.image = self.add_contact_photo
+                for x in range (len(self.friend_list)):
+                    friend=self.friend_list[x]
+                    friend_button = ctk.CTkButton(self.scrollable_frame, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
+                    friend_button.pack()
+                    self.friend_list_button.append(friend_button)
+                
+                if 'success' in self.last_received_message:
+                    self.friend_list_button.append(friend_button1)
+                    self.friend_list.append(name)
+                
+                self.last_received_message = ''
 
-                # # Place the new friend button at the top of the friend list
-                # self.pack_before(new_friend_button, self.friend_list_button[0] if self.friend_list_button else None)
-                # self.friend_list_button.insert(0, new_friend_button) 
-
-    def save_friend(self, name:str):
-        file = open('data/'+ self.name +'/friends.data', 'a')
-        file.write(name + '\n')
-        file.close()    
 
     def pack_before(self, widget, before_widget):
         # Function to pack a widget before another widget
@@ -527,7 +557,6 @@ class GUI:
 
     def show_friend(self, refresh: int):
         # Create or refresh the friends frame
-
         add_contact_image = Image.open("Resources\profile.png")
         add_contact_image = add_contact_image.resize((30, 30))
         self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
@@ -553,7 +582,7 @@ class GUI:
                 for x in range (len(self.friend_list)):
                     friend=self.friend_list[x]
                     friend_button = ctk.CTkButton(self.scrollable_frame, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
-                    friend_button.pack()           
+                    friend_button.pack()
                     self.friend_list_button.append(friend_button)
             except:
                 pass
@@ -586,8 +615,6 @@ class GUI:
         #     open(path +'.chat', 'x')
         #     self.show_chat(name)
 
-    def save_chat(self):
-        pass
         
     def display_chat_box(self, name:str): 
         frame = ctk.CTkFrame(self.root, fg_color='transparent')
@@ -626,8 +653,21 @@ class GUI:
             message = buffer.decode('utf-8')
          
             if "joined" in message:
+                # user = message.split(":")[1]
+                # message = user + " has joined"
                 self.chat_transcript_area.insert('end', message + '\n')
-                self.chat_transcript_area.yview(END)                
+                self.chat_transcript_area.yview(END)
+            elif 'CHANGE PROFILE' in message:
+                if message.split()[2].lower() in ['success']:
+                    messagebox.showinfo('Success', 'Success changing profile photo')
+                else:
+                    messagebox.showerror('Error', 'An error occured during changing profile')
+            elif 'Friend add' in message:
+                self.last_received_message = message
+                if message.split()[2].lower() in ['success']:
+                    messagebox.showinfo('Success', 'Success adding friend')
+                else:
+                    messagebox.showerror('Error', 'Friend doesn\'t exist')
             else:
                 self.chat_transcript_area.insert('end', message + '\n')
                 self.chat_transcript_area.yview(END)

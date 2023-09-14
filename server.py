@@ -44,7 +44,7 @@ class ChatServer:
                 if 'CREATE USER' in incoming_buffer.decode('utf-8'):
                     result = self.mydb.create_user(message.split()[2], None)
                     if result:
-                        client.so.sendall('SINGUP SUCCESS'.encode('utf-8'))
+                        client.so.sendall('SIGNUP SUCCESS'.encode('utf-8'))
                         client.name = message.split()[2]
                     else:
                         client.so.sendall('FAILED SIGNUP'.encode('utf-8'))
@@ -64,15 +64,25 @@ class ChatServer:
                         client.so.sendall('FAILED CHANGE USERNAME'.encode('utf-8'))
                 elif 'INIT FRIEND' in message:
                     result = self.mydb.list_friend(message.split()[2])
-                    client.so.sendall(' '.join(result).encode('utf-8'))
+                    if result not in [None, ' ', []]:
+                        client.so.sendall(' '.join(result).encode('utf-8'))
+                    else:
+                        client.so.sendall('empty'.encode('utf-8'))
+                elif 'ADD FRIEND' in message:
+                    result = self.mydb.add_friend(message.split()[2], message.split()[3])
+                    if result:
+                        client.so.sendall('Friend add success'.encode('utf-8'))
+                    else:
+                        client.so.sendall('Friend add failed'.encode('utf-8'))
                 elif 'GET PROFILE' in message:
                     result = self.mydb.get_profile(message.split()[2])
                     if result:
-                        client.so.sendall(result.encode('utf-8'))
+                        client.so.sendall(result)
                     else:
                         client.so.sendall('None'.encode('utf-8'))
                 elif 'CHANGE PROFILE' in message:
-                    result = self.mydb.change_profile(message.split()[2], message.split()[3])
+                    incoming_buffer = client.so.recv(16777215)
+                    result = self.mydb.change_profile(message.split()[2], incoming_buffer)
                     if result:
                         client.so.sendall('CHANGE PROFILE SUCCESS'.encode('utf-8'))
                     else:
