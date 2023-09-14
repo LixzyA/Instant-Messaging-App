@@ -352,10 +352,13 @@ class GUI:
         self.exit_button.bind("<Leave>", on_button_leave) 
 
     def back(self):
+        self.flag=0
+        self.add_group_flag=0
         self.scrollable_frame_clear()
         self.show_friend(1)
 
     def add_friend(self):
+        self.add_group_flag=0
         self.scrollable_frame_clear()
 
         addfriend_image = ctk.CTkImage(Image.open('Resources/addfriend.png'), size=(100, 100))   
@@ -371,7 +374,7 @@ class GUI:
         self.add_friend_entry.pack(pady = 15)
         self.add_friend_button2.pack(side=TOP)
         self.add_friend_entry.focus_set()
-
+        
     def add_group(self):
         if self.add_group_flag==0:
             self.add_group_flag=1
@@ -386,7 +389,7 @@ class GUI:
                 self.checkbox = ctk.CTkCheckBox(self.scrollable_frame, text=friend, command=lambda: self.add_group_member(checked.get()), variable = checked, onvalue=friend, offvalue="del "+friend)
                 self.checkbox.pack()
                 self.group_member_list_checkbox.append(self.checkbox)
-            self.create_group_button= ctk.CTkButton(self.scrollable_frame, text="Create New Group",anchor="s", command=self.create_group)
+            self.create_group_button= ctk.CTkButton(self.scrollable_frame, text="Create New Group",anchor="s", command=self.enter_group_name)
             self.create_group_button.pack(side='bottom', anchor = 'sw')
 
     def add_group_member(self, name:str):
@@ -395,16 +398,36 @@ class GUI:
         else:
             self.member_list.append(name)
 
+    def enter_group_name(self):
+
+        self.enter_group_name_window = ctk.CTkToplevel(self.settings_window)
+        self.enter_group_name_window.geometry('240x336')
+
+        enter_group_name_image = ctk.CTkImage(Image.open('Resources/addgroup.png'), size=(100, 100))   
+        enter_group_name_photo = enter_group_name_image
+
+        self.enter_group_name_entry = ctk.CTkEntry(self.enter_group_name_window)
+        self.enter_group_name_button2 = ctk.CTkButton(self.enter_group_name_window, text='Create Group', command=self.create_group)
+        self.enter_group_name_photo_label = ctk.CTkLabel(self.enter_group_name_window, image=enter_group_name_photo, corner_radius = 40, text= '', pady=5)
+        self.enter_group_name_label = ctk.CTkLabel(self.enter_group_name_window, text= "Enter Group Name!", corner_radius = 10, font = ("oswald", 14), text_color = "white", pady=5, fg_color="#575353")
+
+        self.enter_group_name_label.pack(pady= 20)
+        self.enter_group_name_photo_label.pack(pady= 20)
+        self.enter_group_name_entry.pack(pady = 10)
+        self.enter_group_name_button2.pack(pady=10)
+        self.enter_group_name_entry.focus_set()
+
     def create_group(self):
         self.add_group_flag=0
-        group_name = ""
+        group_name = self.enter_group_name_entry.get() + ' (' + str(len(self.member_list)) +')'
+        self.enter_group_name_label.destroy()
+        self.enter_group_name_photo_label.destroy()
+        self.enter_group_name_entry.destroy()
+        self.enter_group_name_button2.destroy()
+        self.enter_group_name_window.destroy()
         # create_group_command = CREATE_GROUP + " ".join(self.member_list)
         # self.client_socket.sendall(create_group_command.encode('utf-8'))
         self.scrollable_frame_clear()
-        for x in range (len(self.member_list)):
-            group_name = group_name + self.member_list[x] + ", " 
-        self.create_group_label.pack_forget()
-        self.create_group_button.pack_forget()
         group_button = ctk.CTkButton(self.scrollable_frame, text= group_name, command=partial(self.show_chat, group_name), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
         group_button.pack()
         self.group_chat_button_list.append(group_button)
@@ -725,7 +748,6 @@ class GUI:
             else:
                 self.chat_transcript_area.insert('end', message + '\n')
                 self.chat_transcript_area.yview(END)
-
         so.close()
     
     
