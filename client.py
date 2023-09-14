@@ -24,6 +24,7 @@ CHANGE_PROFILE = 'CHANGE PROFILE '
 INIT_FRIEND = 'INIT FRIEND '
 ADD_FRIEND = 'ADD FRIEND '
 GET_PROFILE = 'GET PROFILE '
+CREATE_GROUP = 'CREATE GROUP '
 
 
 class ScrollableFrame(ctk.CTkScrollableFrame):
@@ -47,6 +48,7 @@ class GUI:
         self.enter_text_widget = None
         self.join_button = None
         self.add_contact_photo = None  # Initialize the add_contact_photo as None
+        self.settings_window = None
         ctk.set_appearance_mode('light')
         state = self.initialize_socket()
         if state.lower() == 'success':
@@ -302,7 +304,7 @@ class GUI:
         #group button
         add_group_image = ctk.CTkImage(Image.open('Resources/addgroup.png'),  size=(40, 40))   
         add_group_photo = add_group_image
-        self.add_group_button = ctk.CTkButton(menu, image=add_group_photo, command=partial(self.add_group, menu),text = '', fg_color= 'transparent', width=50,  hover_color="#B9B9B9")
+        self.add_group_button = ctk.CTkButton(menu, image=add_group_photo, command=self.add_group,text = '', fg_color= 'transparent', width=50,  hover_color="#B9B9B9")
         self.add_group_button.photo = add_group_photo  
         self.add_group_button.pack(anchor='w')
         self.add_group_flag = 0
@@ -370,7 +372,7 @@ class GUI:
         self.add_friend_button2.pack(side=TOP)
         self.add_friend_entry.focus_set()
 
-    def add_group(self, menu):
+    def add_group(self):
         if self.add_group_flag==0:
             self.add_group_flag=1
             self.group_member_list_checkbox = []
@@ -396,6 +398,8 @@ class GUI:
     def create_group(self):
         self.add_group_flag=0
         group_name = ""
+        # create_group_command = CREATE_GROUP + " ".join(self.member_list)
+        # self.client_socket.sendall(create_group_command.encode('utf-8'))
         self.scrollable_frame_clear()
         for x in range (len(self.member_list)):
             group_name = group_name + self.member_list[x] + ", " 
@@ -418,7 +422,7 @@ class GUI:
         
         old_name = self.name
         def change_label_text():
-            settings_username.config(text=self.name,  font="oswald")
+            self.settings_username.configure(text=self.name,  font=('Oswald',14))
             self.e.pack_forget()
             change_username_command = CHANGE_USERNAME + old_name + ' ' + self.name
             self.client_socket.send(change_username_command.encode('utf-8'))
@@ -427,18 +431,18 @@ class GUI:
             if self.flag==0:
                 # Hide the button
                 self.flag=1
-                change_username_button.pack_forget()
-                change_photo_button.pack_forget()
+                self.change_username_button.pack_forget()
+                self.change_photo_button.pack_forget()
 
                 # Create a new entry widget and pack it below the button
-                self.e = ctk.CTkEntry(settings_window)
+                self.e = ctk.CTkEntry(self.settings_window)
                 self.e.insert(0, 'Enter new username')
                 self.e.bind("<FocusIn>", self.on_entry_click)
                 self.e.pack(pady=5)
 
                 # Pack the button below the entry
-                change_username_button.pack(pady=5)
-                change_photo_button.pack(pady=5)
+                self.change_username_button.pack(pady=5)
+                self.change_photo_button.pack(pady=5)
             else:
                 self.e.pack_forget()
                 self.flag=0
@@ -450,7 +454,7 @@ class GUI:
              file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif *.bmp *.ppm *.pgm")])
              if file_path:
                 compressed_image = Image.open(file_path)
-                compressed_image.resize((100,100))
+                compressed_image = compressed_image.resize((100,100), inplace=True)
                 compressed_image.save('profile_images/' + self.name + '.jpg', optimize=True, quality = 20)
                 
                 image = ctk.CTkImage(compressed_image)
@@ -460,10 +464,11 @@ class GUI:
                 self.profile_photo.configure(image=photo)
                 self.profile_photo.image=photo
 
-                photo2 = ctk.CTkImage(compressed_image).configure(size = (80,80))
+                photo2 = ctk.CTkImage(compressed_image)
+                photo2.configure(size = (80,80))
                 # photo2 = ctk.CTkImage(Image.open(file_path), size=(80,80))
-                self.settings_profile_image=photo2
-                self.settings_profile_photo.configure(image=self.settings_profile_image)
+                settings_profile_image=photo2
+                self.settings_profile_photo.configure(image=settings_profile_image)
                 self.settings_profile_photo.image=self.settings_profile_image
 
                 binary = open('profile_images/' + self.name + '.jpg', 'rb').read()
@@ -471,24 +476,29 @@ class GUI:
                 self.client_socket.sendall(change_profile_command.encode('utf-8'))
                 self.client_socket.sendall(binary)
 
-
         self.flag=0
-        settings_window = ctk.CTkToplevel(self.root)
-        settings_window.title("Settings")
+        if self.settings_window is None or not self.settings_window.winfo_exists():
+            self.settings_window = ctk.CTkToplevel(self.root)
+            self.settings_window.title("Settings")
+            self.settings_window.wm_transient(self.root)
+            self.settings_window.protocol('WM_DELETE_WINDOW', self.close)
+        else:
+            self.settings_window.focus()  # if window exists focus it
+        
 
         self.settings_profile_image=copy(self.profile_photo)
         self.settings_profile_image.configure(size = (80,80))
-        self.settings_profile_photo=ctk.CTkLabel(settings_window,image=self.settings_profile_image, text = ' ')
+        self.settings_profile_photo=ctk.CTkLabel(self.settings_window,image=self.settings_profile_image, text = ' ')
         self.settings_profile_photo.pack(anchor="center")
 
-        settings_username=ctk.CTkLabel(settings_window, text=self.name)
-        settings_username.pack(pady=5)
+        self.settings_username=ctk.CTkLabel(self.settings_window, text=self.name)
+        self.settings_username.pack(pady=5)
 
-        change_username_button = ctk.CTkButton(settings_window, text="Change Username", command=move_button_and_add_entry)
-        change_username_button.pack(pady=10)
+        self.change_username_button = ctk.CTkButton(self.settings_window, text="Change Username", command=move_button_and_add_entry)
+        self.change_username_button.pack(pady=10)
 
-        change_photo_button = ctk.CTkButton(settings_window, text="Change Profile Picture", command=change_photo)
-        change_photo_button.pack(pady=10)
+        self.change_photo_button = ctk.CTkButton(self.settings_window, text="Change Profile Picture", command=change_photo)
+        self.change_photo_button.pack(pady=10)
 
     def show_change_profile_window(self):
         change_profile_window = ctk.CTkToplevel(self.root)
@@ -706,6 +716,12 @@ class GUI:
                     messagebox.showinfo('Success', 'Success adding friend')
                 else:
                     messagebox.showerror('Error', 'Friend doesn\'t exist')
+            elif 'Create group' in message:
+                self.last_received_message = message
+                if 'success' in message:
+                    messagebox.showinfo('Success', 'Success creating group')
+                else:
+                    messagebox.showerror('Error', 'Something happened when creating group')
             else:
                 self.chat_transcript_area.insert('end', message + '\n')
                 self.chat_transcript_area.yview(END)
@@ -738,6 +754,13 @@ class GUI:
         message = (message + ' ' + target_name).encode('utf-8')
         self.client_socket.send(message)
         self.enter_text_widget.delete(1.0, 'end')
+
+    def close(self):
+        self.settings_profile_photo.pack_forget()
+        self.settings_username.pack_forget()
+        self.change_username_button.pack_forget()
+        self.change_photo_button.pack_forget()
+        self.settings_window.destroy()
 
 
     def on_close_window(self):
