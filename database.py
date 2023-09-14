@@ -21,7 +21,6 @@ class DB:
         found = self.check_username_if_exists(name)
         try:
             if not found:
-                #need to check if name already exists
                 sql = 'INSERT INTO user (name, profile_pic) values (%s, %s)'
                 
                 if profile_pic not in [None, ' ', '']:
@@ -148,15 +147,64 @@ class DB:
         
         return ls
 
+    def list_chatroom(self, user_name:str):
+        sql = 'SELECT user_id, name FROM user where name = %s'
+        val = (user_name,)
+        mycursor = self.mydb.cursor()
+        mycursor.execute(sql,val)
+        
+        for (user_id, name) in mycursor:
+            user_id = user_id
+
+        sql = 'SELECT room_id from participants join user on participants.user_id = user.user_id where participants.user_id = %s'
+        val = (user_id,)
+        mycursor.execute(sql,val)
+        
+
     def create_chatroom(self, chatroom_name: str, room_type: int, participants: list):
         #check if chatroom already exist
-        sql = 'SELECT * FROM chatroom WHERE '
-
+        sql = 'SELECT COUNT(*) FROM chatroom WHERE room_name =%s'
+        val = (chatroom_name,)
         mycursor = self.mydb.cursor()
-        sql = 'INSERT INTO chatroom (room_name, room_type) values (%s, %s)'
-        val = (chatroom_name, room_type)
-        mycursor.execute(sql, val)
-        self.mydb.commit()
+        mycursor.execute(sql,val)
+
+        for (count, ) in mycursor:
+            count = count
+
+        if count == 0:
+            try:
+                sql = 'INSERT INTO chatroom (room_name, room_type) values (%s, %s)'
+                val = (chatroom_name, room_type)
+                mycursor.execute(sql, val)
+                self.mydb.commit()
+
+                #add participants
+                mycursor = self.mydb.cursor()
+                sql = 'SELECT room_id from chatroom where room_name = %s'
+                val = (chatroom_name,)
+                mycursor.execute(sql,val)
+
+                for (room_id,) in mycursor:
+                    room_id = room_id
+                
+                sql = 'SELECT user_id from user where name=%s'
+                users_id = []
+                for mem in participants:
+                    temp = (mem,)
+                    mycursor.execute(sql, temp)
+                    for (user_id,) in mycursor:
+                        users_id.append(user_id) 
+
+                sql = 'INSERT INTO participants (room_id, user_id) values (%s, %s)'
+                for row in users_id:
+                    mycursor.execute(sql, (room_id, row))
+                self.mydb.commit()
+                return 'success' + chatroom_name
+            except Exception as e:
+                log.exception(e)
+        else:
+            return True
+
 
     def get_room_list(self, name:str):
         cursor = self.mydb.cursor()
@@ -226,7 +274,7 @@ class DB:
 
 
     def delete(self,):
-        sql = 'DELETE FROM friends'
+        sql = "DELETE FROM chatroom"
         cursor = self.mydb.cursor()
         cursor.execute(sql)
         self.mydb.commit()
@@ -234,7 +282,9 @@ class DB:
 log = logging.getLogger()
 if __name__ == '__main__':
     mydb = DB()
-    print(mydb.check_username_if_exists('jotin'))
+    mydb.delete()
+    # print(mydb.create_chatroom('Private 1', 0, ['Juan', 'Felix']))
+    # print(mydb.create_chatroom('Group 1', 1, ['Juan', 'Felix', 'brodi']))
     # # mydb.create_user('lix', 'Resources/profile.png')
     # res = mydb.create_user('Juan', '')
     # print('create user', res)
@@ -244,7 +294,7 @@ if __name__ == '__main__':
     # ls = mydb.list_friend('Felix')
     # print(ls)
 '''
-chatroom = (room_id auto_increment, room_type, creator_id)
+chatroom = (room_id auto_increment, room_type)
 user = (user_id, name, profile_pic)
 friends = (friend_id, user_id)
 messages = (message, message_id auto_increment, room_id, user_id)
