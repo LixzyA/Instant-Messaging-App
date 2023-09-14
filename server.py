@@ -87,6 +87,8 @@ class ChatServer:
                         client.so.sendall('CHANGE PROFILE SUCCESS'.encode('utf-8'))
                     else:
                         client.so.sendall('CHANGE PROFILE FAILED'.encode('utf-8'))
+                elif 'CREATE GROUP' in message:
+                    result = self.mydb.create_chatroom(room_type= 1, participants= message[2:].split(), room_name = '')
                 else:
                     self.last_received_message = message
                     self.send_message_to_client(client)
