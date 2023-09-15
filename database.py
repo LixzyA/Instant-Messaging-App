@@ -121,8 +121,7 @@ class DB:
                 mycursor.execute(sql,val)
                 self.mydb.commit()
                 room_name = friend_name + ' and ' + user_name + "\'s chat"
-                self.create_chatroom(chatroom_name= room_name, room_type= 0, participants= [friend_name, user_name])
-
+                result = self.create_chatroom(chatroom_name= room_name, room_type= 0, participants= [friend_name, user_name])
             return True
         
         else:
@@ -149,6 +148,31 @@ class DB:
         
         return ls
 
+    def list_chatroom(self, user_name:str):
+        sql = 'SELECT user_id, name FROM user where name = %s'
+        val = (user_name,)
+        mycursor = self.mydb.cursor()
+        mycursor.execute(sql,val)
+        
+        user_id = None
+        for (user_id, name) in mycursor:
+            user_id = user_id
+
+        sql = 'SELECT room_id from participants join user on participants.user_id = user.user_id where participants.user_id = %s'
+        val = (user_id,)
+        mycursor.execute(sql,val)
+        room_id = []
+        for (id, ) in mycursor:
+            room_id.append(id)
+        
+        sql = 'select room_name from chatroom where room_id = %s'
+        room_name = ''
+        for id in room_id:
+            mycursor.execute(sql, (id, ))
+            for (name, ) in mycursor:
+                room_name += name + '|' + str(id) + ','
+
+        return  room_name.strip(',')#also give room_id
         
 
     def create_chatroom(self, chatroom_name: str, room_type: int, participants: list):
@@ -168,12 +192,13 @@ class DB:
                 mycursor.execute(sql, val)
                 self.mydb.commit()
 
+
                 #add participants
                 mycursor = self.mydb.cursor()
                 sql = 'SELECT room_id from chatroom where room_name = %s'
                 val = (chatroom_name,)
                 mycursor.execute(sql,val)
-                room_id = None
+
                 for (room_id,) in mycursor:
                     room_id = room_id
                 
@@ -189,72 +214,41 @@ class DB:
                 for row in users_id:
                     mycursor.execute(sql, (room_id, row))
                 self.mydb.commit()
-                return True
+                return 'success' + room_id
             except Exception as e:
                 log.exception(e)
-                return False
         else:
             return True
 
 
-    def get_room_list(self, name:str):
-        cursor = self.mydb.cursor()
-        sql = 'SELECT name, user_id from user where name = %s'
-        val = (name, )
-        cursor.execute(sql, val)
-        user_id = None
-        for (name, user_id) in cursor:
-            user_id = user_id
-
-        sql = 'SELECT room_id from participants join user on participants.user_id = user.user_id where participants.user_id = %s'
-        cursor.execute(sql, (user_id, ))
-
-        result = cursor.fetchall()
-        rooms_id = []
-        for (room_id, ) in result:
-            rooms_id.append(room_id)
-        
-        sql = 'select room_name from chatroom where room_id = %s'
-        room_name = ''
-        for v in rooms_id:
-            cursor.execute(sql,(v, ))
-            for (name, ) in cursor:
-                room_name += name + ','
-                
-        return room_name.strip(',')
         
 
-    def send_message(self, message: str, room_name: str, user_name: str):
+    def send_message(self, message: str, room_id: str, user_name: str):
         mycursor = self.mydb.cursor()
-        sql = 'SELECT name, user_id FROM user'
-        mycursor.execute(sql)
-        myresult = mycursor.fetchall()
-        foundUser = False
-        foundChat = False
+        sql = 'SELECT name, user_id FROM user where name = %s'
+        mycursor.execute(sql, (user_name,))
 
-        for tuples in myresult:
-            if user_name in tuples[0]:
-                user_id, name = tuples
-                foundUser = True
+        user_id = None
+        for (id,) in mycursor:
+            user_id = id
+        
+        sql = 'select count(*) from chatroom where room_id = %s'
+        mycursor.execute(sql, (room_id, ))
 
-        myresult  = self.get_room_name()
-        for tuples in myresult:
-            if room_name in tuples[1]:
-                room_id, room_name = tuples 
-                foundChat = True
+        count = None
+        for (counts,) in mycursor:
+            count = counts
 
-        if foundUser and foundChat:
+        if count > 0:
             mycursor = self.mydb.cursor()
-            sql = 'INSERT INTO message(message, message_id, room_id, user_id) values (%s, %s, %s, %s)'
+            sql = 'INSERT INTO message(message, room_id, user_id) values (%s, %s, %s)'
             val = (message, room_id, user_id)
             mycursor.execute(sql, val)
             self.mydb.commit()
-            return 'Success'
+            return True
 
-        elif not foundUser:
-            return 'User doesn\'t exist'
         else:
-            return 'Chat doesn\'t exist'
+            return False
 
     def show_message(self, chat_room_id: int):
         mycursor = self.mydb.cursor()
@@ -294,10 +288,8 @@ class DB:
 log = logging.getLogger()
 if __name__ == '__main__':
     mydb = DB()
-    res = mydb.get_room_list('Felix')
+    res = mydb.list_chatroom('Felix')
     print(res)
-    # print('' == res)
-    # mydb.delete()
     # print(mydb.create_chatroom('Private 1', 0, ['Juan', 'Felix']))
     # print(mydb.create_chatroom('Group 1', 1, ['Juan', 'Felix', 'brodi']))
     # # mydb.create_user('lix', 'Resources/profile.png')
