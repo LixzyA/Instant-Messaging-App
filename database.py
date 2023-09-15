@@ -154,12 +154,24 @@ class DB:
         mycursor = self.mydb.cursor()
         mycursor.execute(sql,val)
         
+        user_id = None
         for (user_id, name) in mycursor:
             user_id = user_id
 
         sql = 'SELECT room_id from participants join user on participants.user_id = user.user_id where participants.user_id = %s'
         val = (user_id,)
         mycursor.execute(sql,val)
+        room_id = []
+        for (id, ) in mycursor:
+            room_id.append(id)
+        
+        sql = 'select room_name from chatroom where room_id = %s'
+        room_name = ''
+        for id in room_id:
+            mycursor.execute(sql, (id, ))
+            for (name, ) in mycursor:
+                room_name += name + ','
+        return room_name.strip(',')
         
 
     def create_chatroom(self, chatroom_name: str, room_type: int, participants: list):
@@ -209,11 +221,7 @@ class DB:
             return True
 
 
-    def get_room_list(self, name:str):
-        cursor = self.mydb.cursor()
-        sql = 'SELECT room_id FROM user where name = %s JOIN participants ON user.user_id = participants.user_id'
-        cursor.execute(sql, (name, ))
-        pass
+        
 
     def send_message(self, message: str, room_name: str, user_name: str):
         mycursor = self.mydb.cursor()
@@ -285,12 +293,8 @@ class DB:
 log = logging.getLogger()
 if __name__ == '__main__':
     mydb = DB()
-    # res = mydb.add_friend('brodi', 'asdfg')
-    # print(res)
-    # res = mydb.get_room_list('Felix')
-    # print(res)
-    # print('' == res)
-    # mydb.delete()
+    res = mydb.list_chatroom('Felix')
+    print(res)
     # print(mydb.create_chatroom('Private 1', 0, ['Juan', 'Felix']))
     # print(mydb.create_chatroom('Group 1', 1, ['Juan', 'Felix', 'brodi']))
     # # mydb.create_user('lix', 'Resources/profile.png')

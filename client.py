@@ -146,6 +146,7 @@ class GUI:
             self.logo_label.destroy()
             self.frame.destroy()
             login_user_command = LOGIN + self.name
+            print('login', login_user_command)
             self.client_socket.sendall(login_user_command.encode('utf-8'))
 
             wait = True
@@ -182,8 +183,6 @@ class GUI:
         file_path = filedialog.askopenfilename(title="Select an Image", filetypes=[("Image Files", "*.png *.jpg *.jpeg")])
 
         if file_path:
-            print('file path', file_path)
-            print(os.stat(file_path).st_size)
             new_image = ctk.CTkImage(Image.open(file_path), size = (40,40))
             # new_image = new_image.resize((40, 40))  # Resize to match the profile image size
             self.profile_photo = new_image
@@ -256,8 +255,8 @@ class GUI:
         self.root.geometry('800x400')
         self.show_menu()
         self.show_friend(0)
-        if self.friend_list not in [None, []]:
-            self.display_chat_box(self.friend_list[0])
+        if self.chatroom_list not in [None, []]:
+            self.display_chat_box(self.chatroom_list[0])
             self.display_chat_entry_box()
 
         else:
@@ -371,6 +370,7 @@ class GUI:
 
         else:
             self.chatroom_list = []
+        print('chatroom', self.chatroom_list)
 
     def back(self):
         self.scrollable_frame_clear()
@@ -402,8 +402,8 @@ class GUI:
             self.create_group_label = ctk.CTkLabel(self.scrollable_frame, text="Create Group", text_color = "white", fg_color="#575353", font=("oswald", 20), width= 250, height=35, corner_radius=5)
             self.create_group_label.pack()
             checked = StringVar()
-            for x in range (len(self.friend_list_button)):
-                friend = self.friend_list[x]
+            for x in range (len(self.chatroom_list)):
+                friend = self.chatroom_list[x]
                 self.checkbox = ctk.CTkCheckBox(self.scrollable_frame, text=friend, command=lambda: self.add_group_member(checked.get()), variable = checked, onvalue=friend, offvalue="del "+friend)
                 self.checkbox.pack()
                 self.group_member_list_checkbox.append(self.checkbox)
@@ -568,17 +568,17 @@ class GUI:
                     # perlu add semua button          
                     friend_button1 = ctk.CTkButton(self.scrollable_frame, text=name, command=partial(self.show_chat, name), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
                     friend_button1.pack()
-                self.friend_list_button = []
+                self.chatroom_list_button = []
 
-                for x in range (len(self.friend_list)):
-                    friend=self.friend_list[x]
+                for x in range (len(self.chatroom_list)):
+                    friend=self.chatroom_list[x]
                     friend_button = ctk.CTkButton(self.scrollable_frame, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
                     friend_button.pack()
-                    self.friend_list_button.append(friend_button)
+                    self.chatroom_list_button.append(friend_button)
                 
                 if 'success' in self.last_received_message:
-                    self.friend_list_button.append(friend_button1)
-                    self.friend_list.append(name)
+                    self.chatroom_list_button.append(friend_button1)
+                    self.chatroom_list.append(name)
                 
                 self.last_received_message = ''
         if self.chatroom_list_button != []:
