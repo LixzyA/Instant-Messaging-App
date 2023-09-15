@@ -36,11 +36,10 @@ class ChatServer:
         self.receive_messages_in_a_new_thread()
 
     def receive_messages(self, client: Client):
-
         while True:
             incoming_buffer = client.so.recv(2048) #initialize the buffer
             if incoming_buffer:
-                message = incoming_buffer.decode('utf-8')
+                message: str = incoming_buffer.decode('utf-8')
                 if 'CREATE USER' in incoming_buffer.decode('utf-8'):
                     result = self.mydb.create_user(message.split()[2], None)
                     if result:
@@ -88,9 +87,24 @@ class ChatServer:
                     else:
                         client.so.sendall('CHANGE PROFILE FAILED'.encode('utf-8'))
                 elif 'CREATE GROUP' in message:
-                    result = self.mydb.create_chatroom(room_type= 1, participants= message[2:].split(), room_name = '')
+                    print(message)
+                    ls = message.split()[3:]
+                    result = self.mydb.create_chatroom(chatroom_name= message.split()[2], room_type= 1, participants=ls)
+                    if result:
+                        client.so.sendall('CREATE GROUP SUCCESS'.encode('utf-8'))
+                    else:
+                        client.so.sendall('CREATE GROUP FAILED'.encode('utf-8'))
+                elif 'LIST CHATROOM' in message:
+                    result = self.mydb.get_room_list(message.split()[2])
+                    print(result)
+                    if result != '':
+                        client.so.sendall(result.encode('utf-8'))
+                    else:
+                        client.so.sendall('Empty'.encode('utf-8'))
                 else:
                     self.last_received_message = message
+                    
+                    result = self.mydb.send_message(message.split()[1:-1], room_name= '', user_name=message.split()[0])
                     self.send_message_to_client(client)
             else:
                 break
@@ -111,11 +125,12 @@ class ChatServer:
         message = sliced[1:-1]
         receiver = sliced[-1]
 
-        print(target_client.name)
+        # print(target_client.name)
+        print(receiver)
 
         for client in self.clients_list:
-            if receiver in target_client.name:
-                client.so.sendall(' '.join(message).encode('utf-8'))
+            if receiver in client.name:
+                client.so.sendall((sender + ' '.join(message)).encode('utf-8'))
             
     def receive_messages_in_a_new_thread(self):
         while True:
