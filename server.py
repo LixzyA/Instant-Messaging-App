@@ -63,12 +63,6 @@ class ChatServer:
                         client.name = message.split()[3]
                     else:
                         client.so.sendall('FAILED CHANGE USERNAME'.encode('utf-8'))
-                elif 'LIST CHATROOM' in message:
-                    result = self.mydb.list_chatroom(message.split()[2])
-                    if result != '':
-                        client.so.sendall(result.encode('utf-8'))
-                    else:
-                        client.so.sendall('empty'.encode('utf-8'))
                 elif 'INIT FRIEND' in message:
                     result = self.mydb.list_friend(message.split()[2])
                     if result not in [None, ' ', []]:
@@ -78,7 +72,7 @@ class ChatServer:
                 elif 'ADD FRIEND' in message:
                     result = self.mydb.add_friend(message.split()[2], message.split()[3])
                     if result:
-                        client.so.sendall('Friend add success'.encode('utf-8'))
+                        client.so.sendall(('Friend add success ' + message.split()[-1]).encode('utf-8'))
                     else:
                         client.so.sendall('Friend add failed'.encode('utf-8'))
                 elif 'GET PROFILE' in message:
@@ -95,7 +89,19 @@ class ChatServer:
                     else:
                         client.so.sendall('CHANGE PROFILE FAILED'.encode('utf-8'))
                 elif 'CREATE GROUP' in message:
-                    result = self.mydb.create_chatroom(room_type= 1, participants= message[2:].split(), room_name = '')
+                    print(message)
+                    ls = message.split()[3:]
+                    result = self.mydb.create_chatroom(chatroom_name= message.split()[2], room_type= 1, participants=ls)
+                    if result:
+                        client.so.sendall(('CREATE GROUP SUCCESS ' + message.split()[-1]).encode('utf-8'))
+                    else:
+                        client.so.sendall('CREATE GROUP FAILED'.encode('utf-8'))
+                elif 'LIST CHATROOM' in message:
+                    result = self.mydb.list_chatroom(message.split()[2])
+                    if result != '':
+                        client.so.sendall(result.encode('utf-8'))
+                    else:
+                        client.so.sendall('empty'.encode('utf-8'))
                 else:
                     self.last_received_message = message
                     self.send_message_to_client(client)
@@ -115,13 +121,15 @@ class ChatServer:
         #self.clients_list
         sliced = self.last_received_message.split()
         sender = sliced[0]
-        message = sliced[1:-1]
-        receiver = sliced[-1]
+        message = sliced[1:-2]
+        receiver = sliced[-2]
+        receiver_id = sliced[-1]
 
+        self.mydb.send_message(message, receiver_id, sender)
         for client in self.clients_list:
-            print(client.name)
             if receiver in client.name:
                 client.so.sendall(' '.join(message).encode('utf-8'))
+        
             
     def receive_messages_in_a_new_thread(self):
         while True:

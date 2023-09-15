@@ -13,7 +13,6 @@ import logging
 import os
 from database import *
 import customtkinter as ctk
-from customtkinter import CTk
 from copy import *
 import io
 
@@ -28,8 +27,6 @@ CREATE_GROUP = 'CREATE GROUP '
 SEND_MESSAGE = 'SEND MESSAGE '
 LIST_CHATROOM = 'LIST CHATROOM '
 
-
-
 class ScrollableFrame(ctk.CTkScrollableFrame):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
@@ -38,8 +35,12 @@ class ScrollableFrame(ctk.CTkScrollableFrame):
         
     def show_chat(self):
         pass
-        
 
+class Chatroom():
+    def __init__(self, id =  None, name = None):
+        self.room_name = name
+        self.room_id = id
+        
 class GUI:
     client_socket = None
     last_received_message = None
@@ -55,7 +56,7 @@ class GUI:
         self.welcome_frame = None
         self.welcome_label1 = None
         self.welcome_label2 = None
-        self.chatroom_list = []
+        self.chatroom_list:list[Chatroom]= []
         ctk.set_appearance_mode('light')
         state = self.initialize_socket()
         if state.lower() == 'success':
@@ -231,7 +232,7 @@ class GUI:
 
     def initialize_gui(self): # GUI initializer
         
-        self.chat_selected = None
+        self.chat_selected: Chatroom = None
         self.friend_list = None
         self.chatroom_list_button = []
         self.group_chat_button_list = []
@@ -250,13 +251,14 @@ class GUI:
             self.friend_list = message.split()
         else:
             self.friend_list = []
+        print(self.friend_list)
         
 
         self.root.geometry('800x400')
         self.show_menu()
         self.show_friend(0)
         if self.chatroom_list not in [None, []]:
-            self.display_chat_box(self.chatroom_list[0])
+            self.display_chat_box(self.chatroom_list[0].room_name)
             self.display_chat_entry_box()
 
         else:
@@ -295,6 +297,13 @@ class GUI:
         self.profile_photo = default_profile_image
         profile_label = ctk.CTkLabel(menu, image=self.profile_photo, text= ' ', pady=5)
         profile_label.pack()
+
+        #contact button
+        contact_image = ctk.CTkImage(Image.open('Resources/contact button.png'),  size=(40, 40))   
+        contact_photo = contact_image
+        self.contact_button = ctk.CTkButton(menu, image=contact_photo, command=self.open_contact,text = '', fg_color= 'transparent', width=50,  hover_color="#B9B9B9")
+        self.contact_button.photo = contact_photo  
+        self.contact_button.pack(anchor='w')
         
         #Add friend Button
         add_friend_image = ctk.CTkImage(Image.open('Resources/addfriend.png'), size=(40, 40))   
@@ -365,18 +374,23 @@ class GUI:
                 wait = False
 
         if message.lower() not in ['empty']:
-            self.chatroom_list += message.split(',')
-            self.chat_selected = self.chatroom_list[0]
+            temp = message.split(',')
+            for mem in temp:
+                name, id = mem.split('|')
+                self.chatroom_list.append(Chatroom(id, name))
+            self.chat_selected = self.chatroom_list[0].room_id
 
         else:
             self.chatroom_list = []
-        print('chatroom', self.chatroom_list)
+        for i in self.chatroom_list:
+            print(i.room_name, i.room_id)
 
     def back(self):
         self.scrollable_frame_clear()
         self.show_friend(1)
 
     def add_friend(self):
+        self.add_group_flag=0
         self.scrollable_frame_clear()
 
         addfriend_image = ctk.CTkImage(Image.open('Resources/addfriend.png'), size=(100, 100))   
@@ -398,16 +412,17 @@ class GUI:
             self.add_group_flag=1
             self.group_member_list_checkbox = []
             self.member_list = []
-            self.scrollable_frame_clear()
-            self.create_group_label = ctk.CTkLabel(self.scrollable_frame, text="Create Group", text_color = "white", fg_color="#575353", font=("oswald", 20), width= 250, height=35, corner_radius=5)
-            self.create_group_label.pack()
+            self.contact_window_clear()
+
+            self.create_group_button = ctk.CTkButton(self.change_contact_window, text="Add to Group", text_color = "white", fg_color="#575353", font=("oswald", 20), width= 250, height=35, corner_radius=5, command=self.enter_group_name)
+            self.create_group_button.pack()
             checked = StringVar()
-            for x in range (len(self.chatroom_list)):
-                friend = self.chatroom_list[x]
-                self.checkbox = ctk.CTkCheckBox(self.scrollable_frame, text=friend, command=lambda: self.add_group_member(checked.get()), variable = checked, onvalue=friend, offvalue="del "+friend)
+            for x in range (len(self.friend_list)):
+                friend = self.friend_list[x]
+                self.checkbox = ctk.CTkCheckBox(self.change_contact_window, text=friend, command=lambda: self.add_group_member(checked.get()), variable = checked, onvalue=friend, offvalue="del "+friend)
                 self.checkbox.pack()
                 self.group_member_list_checkbox.append(self.checkbox)
-            self.create_group_button= ctk.CTkButton(self.scrollable_frame, text="Create New Group",anchor="s", command=self.create_group)
+            self.create_group_button= ctk.CTkButton(self.scrollable_frame, text="Create New Group",anchor="s", command=self.enter_group_name)
             self.create_group_button.pack(side='bottom', anchor = 'sw')
 
     def add_group_member(self, name:str):
@@ -416,20 +431,53 @@ class GUI:
         else:
             self.member_list.append(name)
 
+    def enter_group_name(self):
+
+        self.enter_group_name_window = ctk.CTkToplevel(self.change_contact_window)
+        self.enter_group_name_window.geometry('240x336')
+        self.enter_group_name_window.wm_transient(self.change_contact_window)
+
+        enter_group_name_image = ctk.CTkImage(Image.open('Resources/addgroup.png'), size=(100, 100))   
+        enter_group_name_photo = enter_group_name_image
+
+        self.enter_group_name_entry = ctk.CTkEntry(self.enter_group_name_window)
+        self.enter_group_name_button2 = ctk.CTkButton(self.enter_group_name_window, text='Create Group', command=self.create_group)
+        self.enter_group_name_photo_label = ctk.CTkLabel(self.enter_group_name_window, image=enter_group_name_photo, corner_radius = 40, text= '', pady=5)
+        self.enter_group_name_label = ctk.CTkLabel(self.enter_group_name_window, text= "Enter Group Name!", corner_radius = 10, font = ("oswald", 14), text_color = "white", pady=5, fg_color="#575353")
+
+        self.enter_group_name_label.pack(pady= 20)
+        self.enter_group_name_photo_label.pack(pady= 20)
+        self.enter_group_name_entry.pack(pady = 10)
+        self.enter_group_name_button2.pack(pady=10)
+        self.enter_group_name_entry.focus_set()
+
     def create_group(self):
         self.add_group_flag=0
-        group_name = ""
-        # create_group_command = CREATE_GROUP + " ".join(self.member_list)
-        # self.client_socket.sendall(create_group_command.encode('utf-8'))
+        group_name = self.enter_group_name_entry.get()
+        display_group_name = group_name + ' (' + str(len(self.member_list)) +')'
+        create_group_command = CREATE_GROUP + group_name + ' ' + ' '.join(self.member_list)
+        self.client_socket.sendall(create_group_command.encode('utf-8'))
+        
+
+        wait = True
+        while wait:
+            try:
+                if 'create group' in self.last_received_message:
+                    wait = False
+                    break
+            except:
+                continue
+        
+
+        self.chatroom_list.append(Chatroom(name=group_name, id = self.last_received_message.split()[-1]))
         self.scrollable_frame_clear()
-        for x in range (len(self.member_list)):
-            group_name = group_name + self.member_list[x] + ", " 
-        self.create_group_label.pack_forget()
-        self.create_group_button.pack_forget()
-        group_button = ctk.CTkButton(self.scrollable_frame, text= group_name, command=partial(self.show_chat, group_name), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
+        group_button = ctk.CTkButton(self.scrollable_frame, text= display_group_name, command=partial(self.show_chat, display_group_name), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
         group_button.pack()
         self.group_chat_button_list.append(group_button)
+        self.enter_group_name_window.destroy()
+        self.change_contact_window.destroy()
         self.show_friend(1)
+        self.last_received_message = ''
     
     def scrollable_frame_clear(self):
         _list = self.scrollable_frame.winfo_children()
@@ -438,6 +486,14 @@ class GUI:
                 _list.extend(item.winfo_children())
         for item in _list:
             item.pack_forget() 
+
+    def contact_window_clear(self):
+        _list = self.change_contact_window.winfo_children()
+        for item in _list :
+            if item.winfo_children() :
+                _list.extend(item.winfo_children())
+        for item in _list:
+            item.pack_forget()
         
     def open_settings(self):
         
@@ -553,9 +609,7 @@ class GUI:
                             break
                         else:
                             print('add friend else', self.last_received_message)
-
                     except:
-                        # print('add friend except', self.last_received_message)
                         continue
                 self.add_friend_entry.delete(0, END)
                 self.add_friend_entry.pack_forget()
@@ -571,14 +625,14 @@ class GUI:
                 self.chatroom_list_button = []
 
                 for x in range (len(self.chatroom_list)):
-                    friend=self.chatroom_list[x]
+                    friend=self.chatroom_list[x].room_name
                     friend_button = ctk.CTkButton(self.scrollable_frame, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
                     friend_button.pack()
                     self.chatroom_list_button.append(friend_button)
                 
                 if 'success' in self.last_received_message:
                     self.chatroom_list_button.append(friend_button1)
-                    self.chatroom_list.append(name)
+                    self.chatroom_list.append(Chatroom(name, id = self.last_received_message.split()[-1]))
                 
                 self.last_received_message = ''
         if self.chatroom_list_button != []:
@@ -625,10 +679,8 @@ class GUI:
                 add_contact_image = add_contact_image.resize((30, 30))
                 self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
 
-                #self.friend_list_button.clear()
-
                 for x in range (len(self.chatroom_list)):
-                    friend=self.chatroom_list[x]
+                    friend=self.chatroom_list[x].room_name
                     friend_button = ctk.CTkButton(self.scrollable_frame, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
                     friend_button.pack()
                     self.chatroom_list_button.append(friend_button)
@@ -643,11 +695,13 @@ class GUI:
 
     
 
-    def show_chat(self, name: str):
-        chat_history = None
+    def show_chat(self, name):
         self.chat_selected_label.pack_forget()
-        self.chat_selected_label.configure(text = 'name')
+        self.chat_selected_label.configure(text = name)
         self.chat_selected_label.pack(side='top', anchor='w', padx=5)
+        for mem in self.chatroom_list:
+            if name == mem.room_name:
+                self.chat_selected = mem
 
 
     def open_contact(self):
@@ -657,7 +711,7 @@ class GUI:
             self.change_contact_window.geometry("300x400")  
             self.change_contact_window.wm_transient(self.root)
 
-            friend_list_frame = ctk.CTkFrame(self.change_contact_window)
+            friend_list_frame = ScrollableFrame(self.change_contact_window)
             friend_list_frame.pack(fill="both", expand=True)
 
             self.create_friend_list(friend_list_frame)
@@ -719,6 +773,12 @@ class GUI:
                     messagebox.showinfo('Success', 'Success changing profile photo')
                 else:
                     messagebox.showerror('Error', 'An error occured during changing profile')
+            elif 'CHANGE USERNAME' in message:
+                if message.split()[2].lower() in 'success':
+                    messagebox.showinfo('Success', 'Success changing username')
+                else:
+                    messagebox.showerror('Error', 'An error occured during changing username')
+
             elif 'Friend add' in message:
                 self.last_received_message = message
                 if message.split()[2] in 'success':
@@ -736,8 +796,6 @@ class GUI:
                 self.chat_transcript_area.yview(END)
 
         so.close()
-    
-
 
     def on_enter_key_pressed(self, event):
         self.send_chat()
@@ -748,12 +806,11 @@ class GUI:
 
     def send_chat(self):
         senders_name = self.name + " "
-        target_name = self.chat_selected
         data = self.enter_text_widget.get(1.0, 'end').strip()
         message = (senders_name + data)
         self.chat_transcript_area.insert('end', message + '\n')
         self.chat_transcript_area.yview(END)
-        message = (message + ' ' + target_name).encode('utf-8')
+        message = (message + ' ' + self.chat_selected.room_name + ' ' + self.chat_selected.room_id).encode('utf-8')
         self.client_socket.send(message)
         self.enter_text_widget.delete(1.0, 'end')
 
