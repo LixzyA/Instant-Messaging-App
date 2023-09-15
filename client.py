@@ -716,11 +716,6 @@ class GUI:
                 break
             message = buffer.decode('utf-8')
             print(message)
-            # if "joined" in message:
-            #     # user = message.split(":")[1]
-            #     # message = user + " has joined"
-            #     self.chat_transcript_area.insert('end', message + '\n')
-            #     self.chat_transcript_area.yview(END)
             if 'CHANGE PROFILE' in message:
                 if message.split()[2].lower() in ['success']:
                     messagebox.showinfo('Success', 'Success changing profile photo')
