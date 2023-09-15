@@ -122,7 +122,6 @@ class DB:
                 self.mydb.commit()
                 room_name = friend_name + ' and ' + user_name + "\'s chat"
                 result = self.create_chatroom(chatroom_name= room_name, room_type= 0, participants= [friend_name, user_name])
-                print('Create chatroom', result)
             return True
         
         else:

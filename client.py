@@ -234,9 +234,10 @@ class GUI:
         
         self.chat_selected = None
         self.friend_list = None
-        self.friend_list_button = []
+        self.chatroom_list_button = []
         self.group_chat_button_list = []
 
+        self.list_chatroom()
         init_friend_command = INIT_FRIEND + self.name
         self.client_socket.sendall(init_friend_command.encode('utf-8'))
         wait = True
@@ -248,7 +249,6 @@ class GUI:
         
         if message not in ['empty', ' ', None]:
             self.friend_list = message.split()
-            self.chat_selected = self.friend_list[0]
         else:
             self.friend_list = []
         
@@ -371,8 +371,6 @@ class GUI:
 
         else:
             self.chatroom_list = []
-        
-        print('chatroom',self.chatroom_list)
 
     def back(self):
         self.scrollable_frame_clear()
@@ -629,19 +627,19 @@ class GUI:
 
                 #self.friend_list_button.clear()
 
-                for x in range (len(self.friend_list)):
-                    friend=self.friend_list[x]
+                for x in range (len(self.chatroom_list)):
+                    friend=self.chatroom_list[x]
                     friend_button = ctk.CTkButton(self.scrollable_frame, text=friend, command=partial(self.show_chat, friend), image = self.add_contact_photo,anchor='w' ,fg_color="transparent", text_color="black", hover_color="#B9B9B9")
                     friend_button.pack()
-                    self.friend_list_button.append(friend_button)
+                    self.chatroom_list_button.append(friend_button)
             except:
                 pass
 
         else:  # Refresh friend list based on updated data
             for x in range(len(self.group_chat_button_list)):
                 self.group_chat_button_list[x].pack()
-            for x in range(len(self.friend_list_button)):
-                self.friend_list_button[x].pack()
+            for x in range(len(self.chatroom_list_button)):
+                self.chatroom_list_button[x].pack()
 
     
 

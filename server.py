@@ -112,10 +112,8 @@ class ChatServer:
         message = sliced[1:-1]
         receiver = sliced[-1]
 
-        print(target_client.name)
-
         for client in self.clients_list:
-            if receiver in target_client.name:
+            if receiver in client.name:
                 client.so.sendall(' '.join(message).encode('utf-8'))
             
     def receive_messages_in_a_new_thread(self):
