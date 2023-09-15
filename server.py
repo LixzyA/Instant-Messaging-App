@@ -70,6 +70,7 @@ class ChatServer:
                         client.so.sendall('empty'.encode('utf-8'))
                 elif 'ADD FRIEND' in message:
                     result = self.mydb.add_friend(message.split()[2], message.split()[3])
+                    print(result)
                     if result:
                         client.so.sendall('Friend add success'.encode('utf-8'))
                     else:

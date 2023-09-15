@@ -120,7 +120,9 @@ class DB:
                 val = (friend_id, user_id)
                 mycursor.execute(sql,val)
                 self.mydb.commit()
-
+                room_name = friend_name + ' and ' + user_name + "\'s chat"
+                result = self.create_chatroom(chatroom_name= room_name, room_type= 0, participants= [friend_name, user_name])
+                print('Create chatroom', result)
             return True
         
         else:
@@ -178,6 +180,7 @@ class DB:
                 mycursor.execute(sql, val)
                 self.mydb.commit()
 
+
                 #add participants
                 mycursor = self.mydb.cursor()
                 sql = 'SELECT room_id from chatroom where room_name = %s'
@@ -186,6 +189,7 @@ class DB:
 
                 for (room_id,) in mycursor:
                     room_id = room_id
+                print(chatroom_name)
                 
                 sql = 'SELECT user_id from user where name=%s'
                 users_id = []
@@ -282,7 +286,12 @@ class DB:
 log = logging.getLogger()
 if __name__ == '__main__':
     mydb = DB()
-    mydb.delete()
+    # res = mydb.add_friend('brodi', 'asdfg')
+    # print(res)
+    # res = mydb.get_room_list('Felix')
+    # print(res)
+    # print('' == res)
+    # mydb.delete()
     # print(mydb.create_chatroom('Private 1', 0, ['Juan', 'Felix']))
     # print(mydb.create_chatroom('Group 1', 1, ['Juan', 'Felix', 'brodi']))
     # # mydb.create_user('lix', 'Resources/profile.png')

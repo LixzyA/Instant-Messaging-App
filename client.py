@@ -25,6 +25,9 @@ INIT_FRIEND = 'INIT FRIEND '
 ADD_FRIEND = 'ADD FRIEND '
 GET_PROFILE = 'GET PROFILE '
 CREATE_GROUP = 'CREATE GROUP '
+SEND_MESSAGE = 'SEND MESSAGE '
+LIST_CHATROOM = 'LIST CHATROOM '
+
 
 
 class ScrollableFrame(ctk.CTkScrollableFrame):
@@ -49,6 +52,10 @@ class GUI:
         self.join_button = None
         self.add_contact_photo = None  # Initialize the add_contact_photo as None
         self.settings_window = None
+        self.welcome_frame = None
+        self.welcome_label1 = None
+        self.welcome_label2 = None
+        self.chatroom_list = []
         ctk.set_appearance_mode('light')
         state = self.initialize_socket()
         if state.lower() == 'success':
@@ -252,13 +259,16 @@ class GUI:
         if self.friend_list not in [None, []]:
             self.display_chat_box(self.friend_list[0])
             self.display_chat_entry_box()
-            self.listen_for_incoming_messages_in_a_thread()
 
         else:
-            f = ctk.CTkFrame(self.root, fg_color= 'transparent', bg_color= 'transparent')
-            ctk.CTkLabel(f, text='Welcome to Barudak Chat!', fg_color= 'transparent', bg_color= 'transparent').pack()
-            ctk.CTkLabel(f, text='Add a friend now to start Chatting!', fg_color= 'transparent', bg_color= 'transparent').pack()
-            f.pack(expand=True)
+            self.welcome_frame = ctk.CTkFrame(self.root, fg_color= 'transparent', bg_color= 'transparent')
+            self.welcome_label1 = ctk.CTkLabel(self.welcome_frame, text='Welcome to Barudak Chat!', fg_color= 'transparent', bg_color= 'transparent')
+            self.welcome_label2 = ctk.CTkLabel(self.welcome_frame, text='Add a friend now to start Chatting!', fg_color= 'transparent', bg_color= 'transparent')
+            self.welcome_label1.pack()
+            self.welcome_label2.pack()
+            self.welcome_frame.pack(expand=True)
+        self.listen_for_incoming_messages_in_a_thread()
+        
         
     def show_menu(self):
         #Profile
@@ -343,6 +353,26 @@ class GUI:
 
         self.exit_button.bind("<Enter>", on_button_hover) 
         self.exit_button.bind("<Leave>", on_button_leave) 
+
+    def list_chatroom(self):
+        chatroom_list_command = LIST_CHATROOM + self.name
+        self.client_socket.sendall(chatroom_list_command.encode('utf-8'))
+
+        wait = True
+        while wait:
+            buffer = self.client_socket.recv(2048)
+            message = buffer.decode('utf-8')
+            if message:
+                wait = False
+
+        if message.lower() not in ['empty']:
+            self.chatroom_list += message.split(',')
+            self.chat_selected = self.chatroom_list[0]
+
+        else:
+            self.chatroom_list = []
+        
+        print('chatroom',self.chatroom_list)
 
     def back(self):
         self.scrollable_frame_clear()
@@ -520,11 +550,15 @@ class GUI:
                 while wait:
                     try:
                         if 'Friend add' in self.last_received_message:
+                            print('add friend if', self.last_received_message)
                             wait = False
                             break
+                        else:
+                            print('add friend else', self.last_received_message)
+
                     except:
-                        pass                        
-                print(self.last_received_message)
+                        # print('add friend except', self.last_received_message)
+                        continue
                 self.add_friend_entry.delete(0, END)
                 self.add_friend_entry.pack_forget()
                 self.add_friend_button2.pack_forget()
@@ -549,6 +583,12 @@ class GUI:
                     self.friend_list.append(name)
                 
                 self.last_received_message = ''
+        if self.chatroom_list_button != []:
+            self.welcome_frame.destroy()
+            self.welcome_label1.destroy()
+            self.welcome_label2.destroy()
+            self.display_chat_box()
+            self.display_chat_entry_box()
 
 
     def pack_before(self, widget, before_widget):
@@ -610,21 +650,40 @@ class GUI:
         self.chat_selected_label.pack_forget()
         self.chat_selected_label.configure(text = 'name')
         self.chat_selected_label.pack(side='top', anchor='w', padx=5)
-        
-        # try:
-        #     file = open('data/' + self.name + '/' + name + '.chat')
-        #     chat_history= file.readlines()
-        #     file.close()
-        #     for chat in chat_history:
-        #         self.chat_transcript_area.insert(INSERT, chat + '\n')
-        #         self.chat_transcript_area.yview(END)
 
-        # except FileNotFoundError as e:
-        #     logger.exception(str(e))
-        #     path = 'data/' + self.name + '/' + name
-        #     open(path +'.chat', 'x')
-        #     self.show_chat(name)
 
+    def open_contact(self):
+        if not hasattr(self, 'change_contact_window') or not self.change_contact_window: 
+            self.change_contact_window = ctk.CTkToplevel(self.root)
+            self.change_contact_window.title("Friend List")
+            self.change_contact_window.geometry("300x400")  
+            self.change_contact_window.wm_transient(self.root)
+
+            friend_list_frame = ctk.CTkFrame(self.change_contact_window)
+            friend_list_frame.pack(fill="both", expand=True)
+
+            self.create_friend_list(friend_list_frame)
+        else:
+            self.change_contact_window.lift()
+            
+    def create_friend_list(self, frame):
+        add_contact_image = Image.open("Resources\profile.png")
+        add_contact_image = add_contact_image.resize((100, 100))
+        self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
+
+        if not hasattr(self, 'add_contact_photo'):
+            add_contact_image = Image.open("Resources\profile.png")
+            add_contact_image = add_contact_image.resize((30, 30))
+            self.add_contact_photo = ImageTk.PhotoImage(add_contact_image)
+
+        try:
+            for friend in self.friend_list:
+                friend_button = ctk.CTkButton(frame, text=friend, command=partial(self.show_chat, friend),
+                                            image=self.add_contact_photo, anchor='w', fg_color="transparent",
+                                            text_color="black", hover_color="#B9B9B9")
+                friend_button.pack()
+        except:
+            pass
         
     def display_chat_box(self, name:str): 
         frame = ctk.CTkFrame(self.root, fg_color='transparent')
@@ -649,11 +708,6 @@ class GUI:
         thread = threading.Thread(target=self.receive_message_from_server, args=(self.client_socket,)) # Create a thread for the send and receive in same time 
         thread.start()
     
-    def create_friend_button(self, friend_name):
-        # Create a friend button based on the given name and add it to the friends_frame
-        friend_button = ctk.CTkButton(self.friends_frame, text=friend_name, command=partial(self.show_chat, friend_name), padding=(10, 8, 20, 8), style="Custom.TButton", image=self.add_contact_photo, compound=LEFT)
-        friend_button.image = self.add_contact_photo(anchor='w')
-    
     #function to recieve msg
     def receive_message_from_server(self, so):
         while True:
@@ -661,20 +715,20 @@ class GUI:
             if not buffer:
                 break
             message = buffer.decode('utf-8')
-         
-            if "joined" in message:
-                # user = message.split(":")[1]
-                # message = user + " has joined"
-                self.chat_transcript_area.insert('end', message + '\n')
-                self.chat_transcript_area.yview(END)
-            elif 'CHANGE PROFILE' in message:
+            print(message)
+            # if "joined" in message:
+            #     # user = message.split(":")[1]
+            #     # message = user + " has joined"
+            #     self.chat_transcript_area.insert('end', message + '\n')
+            #     self.chat_transcript_area.yview(END)
+            if 'CHANGE PROFILE' in message:
                 if message.split()[2].lower() in ['success']:
                     messagebox.showinfo('Success', 'Success changing profile photo')
                 else:
                     messagebox.showerror('Error', 'An error occured during changing profile')
             elif 'Friend add' in message:
                 self.last_received_message = message
-                if message.split()[2].lower() in ['success']:
+                if message.split()[2] in 'success':
                     messagebox.showinfo('Success', 'Success adding friend')
                 else:
                     messagebox.showerror('Error', 'Friend doesn\'t exist')
@@ -690,14 +744,7 @@ class GUI:
 
         so.close()
     
-    
-    # def on_join(self):
-    #     # if len(self.name_widget.get()) == 0:
-    #     #     messagebox.showerror(
-    #     #         "Enter your name", "Enter your name to send a message")
-    #     #     return
-    #     # self.name_widget.config(state='disabled')
-    #     self.client_socket.send(("joined:" + self.name).encode('utf-8'))
+
 
     def on_enter_key_pressed(self, event):
         self.send_chat()
